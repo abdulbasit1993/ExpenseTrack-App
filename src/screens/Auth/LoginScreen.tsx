@@ -11,6 +11,7 @@ import {
   ScrollView,
   Platform,
   StatusBar,
+  Alert,
 } from 'react-native';
 import { NavigationProp } from '@react-navigation/native';
 import { COLORS } from '../../constants/colors';
@@ -19,6 +20,9 @@ import EyeOffIcon from '../../assets/icons/eye-off.svg';
 import EmailIcon from '../../assets/icons/email.svg';
 import PasswordIcon from '../../assets/icons/key.svg';
 import CustomButton from '../../components/CustomButton';
+import { api } from '../../services/apiService';
+import { storeJwtToken } from '../../utils/storeToken';
+import { useAuth } from '../../context/AuthContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -30,6 +34,8 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { signIn } = useAuth();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(40)).current;
@@ -95,6 +101,34 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const orb2Y = orb2.interpolate({ inputRange: [0, 1], outputRange: [0, 14] });
   const orb1X = orb1.interpolate({ inputRange: [0, 1], outputRange: [0, 10] });
   const orb2X = orb2.interpolate({ inputRange: [0, 1], outputRange: [0, -12] });
+
+  const handleLogin = async () => {
+    try {
+      setLoading(true);
+      const response = await api.post('/auth/login', { email, password });
+      const token = response?.data?.token;
+      const userData = response?.data?.user;
+
+      if (response?.success) {
+        setLoading(false);
+
+        if (token && userData) {
+          await storeJwtToken(token);
+
+          signIn(token);
+        }
+      }
+    } catch (error) {
+      setLoading(false);
+      if (error?.data?.message) {
+        Alert.alert('Error', error?.data?.message);
+      } else if (error?.message) {
+        Alert.alert('Error', error?.message);
+      } else {
+        Alert.alert('Error', 'Invalid email or password.');
+      }
+    }
+  };
 
   return (
     <KeyboardAvoidingView
@@ -209,8 +243,9 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
             <CustomButton
               title="Sign In"
               onPress={() => {
-                navigation.navigate('Home');
+                handleLogin();
               }}
+              loading={loading}
             />
 
             {/* Divider */}

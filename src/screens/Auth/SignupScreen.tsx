@@ -11,7 +11,9 @@ import {
   ScrollView,
   Platform,
   StatusBar,
+  Alert,
 } from 'react-native';
+import { api } from '../../services/apiService';
 import { NavigationProp } from '@react-navigation/native';
 import { COLORS } from '../../constants/colors';
 import EyeIcon from '../../assets/icons/eye.svg';
@@ -20,6 +22,8 @@ import EmailIcon from '../../assets/icons/email.svg';
 import PasswordIcon from '../../assets/icons/key.svg';
 import UserIcon from '../../assets/icons/user.svg';
 import CustomButton from '../../components/CustomButton';
+import { storeJwtToken } from '../../utils/storeToken';
+import { useAuth } from '../../context/AuthContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -33,6 +37,10 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { signIn } = useAuth();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(40)).current;
@@ -98,6 +106,56 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
   const orb2Y = orb2.interpolate({ inputRange: [0, 1], outputRange: [0, 14] });
   const orb1X = orb1.interpolate({ inputRange: [0, 1], outputRange: [0, 10] });
   const orb2X = orb2.interpolate({ inputRange: [0, 1], outputRange: [0, -12] });
+
+  const handleSignup = async () => {
+    setLoading(true);
+
+    if (!firstName || !lastName || !email || !password) {
+      setLoading(false);
+      Alert.alert('Error', 'Please fill in all fields.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setLoading(false);
+      Alert.alert('Error', 'Passwords do not match.');
+      return;
+    }
+
+    let payload = {
+      email,
+      password,
+      firstName,
+      lastName,
+    };
+
+    try {
+      const response = await api.post('/auth/register', payload);
+
+      const token = response?.data?.token;
+      const userData = response?.data?.user;
+
+      if (response?.success) {
+        setLoading(false);
+
+        if (token && userData) {
+          await storeJwtToken(token);
+
+          signIn(token);
+        }
+      }
+    } catch (error) {
+      console.log('Error (signup): ', error);
+      setLoading(false);
+      if (error?.data?.message) {
+        Alert.alert('Error', error?.data?.message);
+      } else if (error?.message) {
+        Alert.alert('Error', error?.message);
+      } else {
+        Alert.alert('Error', 'Failed to sign up. Please try again.');
+      }
+    }
+  };
 
   return (
     <KeyboardAvoidingView
@@ -227,8 +285,37 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
               </TouchableOpacity>
             </View>
 
+            {/* Confirm Password */}
+            <View style={[styles.fieldWrap]}>
+              <PasswordIcon width={22} height={22} />
+              <TextInput
+                style={styles.input}
+                placeholder="Confirm Password"
+                placeholderTextColor="#5A5670"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry={!showConfirmPassword}
+              />
+              <TouchableOpacity
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                // style={styles.eyeBtn}
+              >
+                {showConfirmPassword ? (
+                  <EyeOffIcon width={24} height={24} />
+                ) : (
+                  <EyeIcon width={24} height={24} />
+                )}
+              </TouchableOpacity>
+            </View>
+
             {/* Sign Up button */}
-            <CustomButton title="Sign Up" onPress={() => {}} />
+            <CustomButton
+              title="Sign Up"
+              onPress={() => {
+                handleSignup();
+              }}
+              loading={loading}
+            />
           </View>
 
           {/* Footer */}
