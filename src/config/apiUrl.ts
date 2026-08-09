@@ -1,5 +1,5 @@
 let URLs = {
-  development: 'http://192.168.0.131:5000/api',
+  development: 'http://10.0.2.2:5000/api',
   production: '',
 };
 
