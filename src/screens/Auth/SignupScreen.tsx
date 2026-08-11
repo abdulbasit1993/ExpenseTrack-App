@@ -135,14 +135,10 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
       const token = response?.data?.token;
       const userData = response?.data?.user;
 
-      if (response?.success) {
+      if (response?.success && token) {
         setLoading(false);
-
-        if (token && userData) {
-          await storeJwtToken(token);
-
-          signIn(token);
-        }
+        await storeJwtToken(token);
+        await signIn(token);
       }
     } catch (error) {
       console.log('Error (signup): ', error);
