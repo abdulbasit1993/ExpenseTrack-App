@@ -1,6 +1,7 @@
-import React, { JSX } from 'react';
+import React, { useRef, JSX } from 'react';
 import {
   View,
+  Text,
   Platform,
   TouchableOpacity,
   Dimensions,
@@ -8,7 +9,9 @@ import {
 } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path, Circle, Rect, G } from 'react-native-svg';
+import RBSheet from 'react-native-raw-bottom-sheet';
+import Svg, { Path } from 'react-native-svg';
+// import type { RootStackParamList } from '../navigation/RootStack';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -19,6 +22,8 @@ const NOTCH_WIDTH = 90;
 const CORNER_RADIUS = 24;
 const ACTIVE_COLOR = '#6B4EFF';
 const INACTIVE_COLOR = '#C4C4D4';
+
+type TransactionType = 'expense' | 'income';
 
 // ── Build the SVG notch path ───────────────────────────────────────────────────
 // The path traces: top-left corner → left side → left notch curve → bottom of notch
@@ -118,6 +123,8 @@ export default function CustomTabBar({
   navigation,
 }: BottomTabBarProps) {
   const { bottom: bottomInset } = useSafeAreaInsets();
+  const sheetRef = useRef(null);
+  const selectedTypeRef = useRef<TransactionType | null>(null);
 
   const tabs = state.routes;
   const leftTabs = tabs.slice(0, 2);
@@ -125,6 +132,31 @@ export default function CustomTabBar({
 
   const totalHeight = BAR_HEIGHT + bottomInset;
   const notchPath = buildNotchPath(SCREEN_WIDTH, totalHeight);
+
+  const openQuickAddSheet = () => {
+    selectedTypeRef.current = null;
+    sheetRef.current?.open();
+  };
+
+  const selectTransactionType = (type: TransactionType) => {
+    selectedTypeRef.current = type;
+    sheetRef.current?.close();
+  };
+
+  const handleSheetClose = () => {
+    const selectedType = selectedTypeRef.current;
+    selectedTypeRef.current = null;
+
+    if (!selectedType) {
+      return;
+    }
+
+    const rootNavigation = navigation.getParent();
+
+    if (rootNavigation) {
+      rootNavigation.navigate('AddTransaction', { type: selectedType });
+    }
+  };
 
   const renderTab = (route: (typeof tabs)[0], index: number) => {
     const { options } = descriptors[route.key];
@@ -160,45 +192,115 @@ export default function CustomTabBar({
   };
 
   return (
-    <View style={[styles.wrapper, { height: totalHeight }]}>
-      <Svg
-        width={SCREEN_WIDTH}
-        height={totalHeight}
-        style={StyleSheet.absoluteFill}
-      >
-        {/* Shadow path (slightly larger, offset down) */}
-        <Path d={notchPath} fill="rgba(107, 78, 255, 0.06)" translateY={2} />
-        {/* Main white bar */}
-        <Path d={notchPath} fill="#FFFFFF" />
-      </Svg>
-
-      {/* FAB */}
-      <View style={styles.fabContainer}>
-        <TouchableOpacity
-          style={styles.fab}
-          activeOpacity={0.85}
-          onPress={() => {}}
+    <>
+      <View style={[styles.wrapper, { height: totalHeight }]}>
+        <Svg
+          width={SCREEN_WIDTH}
+          height={totalHeight}
+          style={StyleSheet.absoluteFill}
         >
-          <PlusIcon />
-        </TouchableOpacity>
-      </View>
+          {/* Shadow path (slightly larger, offset down) */}
+          <Path d={notchPath} fill="rgba(107, 78, 255, 0.06)" translateY={2} />
+          {/* Main white bar */}
+          <Path d={notchPath} fill="#FFFFFF" />
+        </Svg>
 
-      {/* Tabs */}
-      <View style={[styles.tabRow, { paddingBottom: bottomInset }]}>
-        {/* Left tabs */}
-        <View style={styles.tabSection}>
-          {leftTabs.map((route, i) => renderTab(route, i))}
+        {/* FAB */}
+        <View style={styles.fabContainer}>
+          <TouchableOpacity
+            style={styles.fab}
+            activeOpacity={0.85}
+            onPress={openQuickAddSheet}
+            accessibilityRole="button"
+            accessibilityLabel="Add transaction"
+          >
+            <PlusIcon />
+          </TouchableOpacity>
         </View>
 
-        {/* Center spacer -- sits under the notch */}
-        <View style={{ width: NOTCH_WIDTH + 8 }} />
+        {/* Tabs */}
+        <View style={[styles.tabRow, { paddingBottom: bottomInset }]}>
+          {/* Left tabs */}
+          <View style={styles.tabSection}>
+            {leftTabs.map((route, i) => renderTab(route, i))}
+          </View>
 
-        {/* Right tabs */}
-        <View style={styles.tabSection}>
-          {rightTabs.map((route, i) => renderTab(route, i + leftTabs.length))}
+          {/* Center spacer -- sits under the notch */}
+          <View style={{ width: NOTCH_WIDTH + 8 }} />
+
+          {/* Right tabs */}
+          <View style={styles.tabSection}>
+            {rightTabs.map((route, i) => renderTab(route, i + leftTabs.length))}
+          </View>
         </View>
       </View>
-    </View>
+
+      <RBSheet
+        ref={sheetRef}
+        height={312}
+        closeOnPressMask
+        closeOnPressBack
+        useNativeDriver={false}
+        onClose={handleSheetClose}
+        customStyles={{
+          wrapper: styles.sheetOverlay,
+          container: styles.sheetContainer,
+          draggableIcon: styles.sheetHandle,
+        }}
+        customModalProps={{
+          animationType: 'fade',
+          statusBarTranslucent: true,
+        }}
+        customAvoidingViewProps={{ enabled: false }}
+      >
+        <View style={styles.sheetContent}>
+          <Text style={styles.sheetTitle}>Add Transaction</Text>
+          <Text style={styles.sheetSubtitle}>What would you like to add?</Text>
+
+          <TouchableOpacity
+            style={[styles.sheetOption, styles.expenseOption]}
+            onPress={() => selectTransactionType('expense')}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Add an expense"
+          >
+            <View style={[styles.optionIcon, styles.expenseIcon]}>
+              <Text style={styles.optionIconText}>↑</Text>
+            </View>
+
+            <View style={styles.optionCopy}>
+              <Text style={styles.optionTitle}>Expense</Text>
+              <Text style={styles.optionDescription}>
+                Record money you spent
+              </Text>
+            </View>
+
+            <Text style={styles.optionArrow}>›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.sheetOption, styles.incomeOption]}
+            onPress={() => selectTransactionType('income')}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Add income"
+          >
+            <View style={[styles.optionIcon, styles.incomeIcon]}>
+              <Text style={styles.optionIconText}>↓</Text>
+            </View>
+
+            <View style={styles.optionCopy}>
+              <Text style={styles.optionTitle}>Income</Text>
+              <Text style={styles.optionDescription}>
+                Record money you received
+              </Text>
+            </View>
+
+            <Text style={styles.optionArrow}>›</Text>
+          </TouchableOpacity>
+        </View>
+      </RBSheet>
+    </>
   );
 }
 
@@ -253,5 +355,86 @@ const styles = StyleSheet.create({
     backgroundColor: '#6B4EFF',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  sheetOverlay: {
+    backgroundColor: 'rgba(15, 23, 42, 0.42)',
+  },
+  sheetContainer: {
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    backgroundColor: '#FFFFFF',
+  },
+  sheetHandle: {
+    width: 42,
+    height: 5,
+    borderRadius: 3,
+    marginTop: 10,
+    backgroundColor: '#CBD5E1',
+  },
+  sheetContent: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+  },
+  sheetTitle: {
+    color: '#0F172A',
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  sheetSubtitle: {
+    color: '#64748B',
+    fontSize: 15,
+    marginTop: 5,
+    marginBottom: 20,
+  },
+  sheetOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 18,
+    marginBottom: 12,
+  },
+  expenseOption: {
+    backgroundColor: '#F5F3FF',
+  },
+  incomeOption: {
+    backgroundColor: '#ECFDF3',
+  },
+  optionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  expenseIcon: {
+    backgroundColor: '#EDE9FE',
+  },
+  incomeIcon: {
+    backgroundColor: '#DCFCE7',
+  },
+  optionIconText: {
+    color: '#0F172A',
+    fontSize: 24,
+    fontWeight: '800',
+  },
+  optionCopy: {
+    flex: 1,
+    marginLeft: 14,
+  },
+  optionTitle: {
+    color: '#0F172A',
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  optionDescription: {
+    color: '#64748B',
+    fontSize: 13,
+    marginTop: 3,
+  },
+  optionArrow: {
+    color: '#64748B',
+    fontSize: 30,
+    fontWeight: '300',
   },
 });
