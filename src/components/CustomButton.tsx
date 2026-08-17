@@ -12,12 +12,14 @@ interface CustomButtonProps {
   title: string;
   onPress: () => void;
   loading?: boolean;
+  disabled?: boolean;
 }
 
 const CustomButton = ({
   title,
   onPress,
   loading = false,
+  disabled = false,
 }: CustomButtonProps) => {
   return (
     <TouchableOpacity

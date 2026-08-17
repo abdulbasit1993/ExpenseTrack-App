@@ -28,6 +28,7 @@ import { api } from '../../services/apiService';
 import { COLORS } from '../../constants/colors';
 import CustomButton from '../../components/CustomButton';
 import Header from '../../components/Header';
+import EditTransactionModal from '../../components/EditTransactionModal';
 
 type RootStackParamList = {
   Transactions: undefined;
@@ -97,14 +98,58 @@ const formatAmount = (value: number) =>
     maximumFractionDigits: 2,
   }).format(value);
 
-type EditTransactionModalProps = {
-  visible: boolean;
-  transaction: Transaction | null;
-  categories: Category[];
-  categoriesStatus: string;
-  onClose: () => void;
-  onSaved: (transaction: Transaction) => void;
-  onDeleted: (id: string) => void;
+type TransactionRowProps = {
+  transaction: Transaction;
+  category?: Category;
+  onPress: () => void;
+};
+
+const TransactionRow = ({
+  transaction,
+  category,
+  onPress,
+}: TransactionRowProps) => {
+  const isExpense = transaction.type === 'expense';
+  const amountColor = isExpense ? EXPENSE_COLOR : COLORS.SUCCESS;
+
+  return (
+    <TouchableOpacity style={styles.row} onPress={onPress} activeOpacity={0.75}>
+      <View
+        style={[
+          styles.rowIconWrap,
+          { backgroundColor: `${category?.color} || COLORS.PRIMARY}1F` },
+        ]}
+      >
+        <View
+          style={[
+            styles.rowIconDot,
+            { backgroundColor: category?.color || COLORS.PRIMARY },
+          ]}
+        />
+      </View>
+
+      <View style={styles.rowBody}>
+        <Text style={styles.rowTitle} numberOfLines={1}>
+          {transaction.title}
+        </Text>
+        <Text style={styles.rowSubtitle} numberOfLines={1}>
+          {category?.name ?? 'Uncategorized'} ·
+          {formatListDate(transaction.date)}
+        </Text>
+      </View>
+
+      <Text style={[styles.rowAmount, { color: amountColor }]}>
+        {isExpense ? '-' : '+'}${formatAmount(transaction.amount)}
+      </Text>
+
+      <Icon
+        name="chevron-forward"
+        size={16}
+        color="#CBD5E1"
+        style={styles.rowChevron}
+      />
+    </TouchableOpacity>
+  );
 };
 
 const TransactionsScreen = ({ navigation }: Props) => {
@@ -159,7 +204,7 @@ const TransactionsScreen = ({ navigation }: Props) => {
           `/transactions?${params.toString()}`,
         );
 
-        const { transactions: items, pagination } = response.data.data;
+        const { transactions: items, pagination } = response.data;
 
         setTransactions(prev =>
           targetPage === 1 ? items : [...prev, ...items],
@@ -263,8 +308,54 @@ const TransactionsScreen = ({ navigation }: Props) => {
               onPress={() => setEditingTransaction(item)}
             />
           )}
+          ItemSeparatorComponent={() => <View style={styles.separator} />}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              tintColor={COLORS.PRIMARY}
+              colors={[COLORS.PRIMARY]}
+            />
+          }
+          onEndReachedThreshold={0.4}
+          onEndReached={handleLoadMore}
+          ListFooterComponent={
+            isLoadingMore ? (
+              <View style={styles.footerLoading}>
+                <ActivityIndicator color={COLORS.PRIMARY} size="small" />
+              </View>
+            ) : null
+          }
+          ListEmptyComponent={() => (
+            <View style={styles.emptyState}>
+              <Icon name="receipt-outline" size={40} color={'#CBD5E1'} />
+              <Text style={styles.emptyStateTitle}>No transactions yet</Text>
+              <Text style={styles.emptyStateSubtitle}>
+                Transactions you add will show up here.
+              </Text>
+              <TouchableOpacity
+                style={styles.emptyStateButton}
+                onPress={() => navigation.navigate('AddTransaction', {})}
+              >
+                <Icon name="add" size={16} color="#FFFFFF" />
+                <Text style={styles.emptyStateButtonText}>Add Transaction</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         />
       )}
+
+      <EditTransactionModal
+        visible={!!editingTransaction}
+        transaction={editingTransaction}
+        categories={categories}
+        categoriesStatus={categoriesStatus}
+        onClose={() => setEditingTransaction(null)}
+        onSaved={handleSaved}
+        onDeleted={handleDeleted}
+        handleDelete={handleDeleteTransaction}
+        handleSave={handleUpdateTransaction}
+      />
     </SafeAreaView>
   );
 };
@@ -273,6 +364,134 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#F8FAFC',
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  content: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 28,
+  },
+  filterWrap: {
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  segmentContainer: {
+    height: 46,
+    marginBottom: 8,
+  },
+  segmentTab: {
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+  },
+  segmentActiveTab: {},
+  segmentTabText: {
+    color: '#64748B',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  segmentActiveTabText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  listContent: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 28,
+  },
+  listEmptyContent: {
+    flexGrow: 1,
+    paddingHorizontal: 20,
+  },
+  separator: {
+    height: 10,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 68,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  rowIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  rowIconDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  rowBody: {
+    flex: 1,
+    marginRight: 8,
+  },
+  rowTitle: {
+    color: '#0F172A',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  rowSubtitle: {
+    color: '#64748B',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  rowAmount: {
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  rowChevron: {
+    marginLeft: 6,
+  },
+  footerLoading: {
+    paddingVertical: 20,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 60,
+  },
+  emptyStateTitle: {
+    color: '#334155',
+    fontSize: 16,
+    fontWeight: '700',
+    marginTop: 14,
+  },
+  emptyStateSubtitle: {
+    color: '#94A3B8',
+    fontSize: 13,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  emptyStateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 20,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: COLORS.PRIMARY,
+    gap: 6,
+  },
+  emptyStateButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+    marginLeft: 4,
   },
 });
 
