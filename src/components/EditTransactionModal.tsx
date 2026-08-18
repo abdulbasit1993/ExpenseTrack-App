@@ -24,6 +24,7 @@ import SegmentedControlTab from 'react-native-segmented-control-tab';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import Icon from '@react-native-vector-icons/ionicons';
 import CustomButton from './CustomButton';
+import { formatDisplayDate } from '../utils/helpers';
 
 const EXPENSE_COLOR = '#EF4444';
 
@@ -33,8 +34,6 @@ const EditTransactionModal = ({
   categories,
   categoriesStatus,
   onClose,
-  onSaved,
-  onDeleted,
   handleDelete,
   handleSave,
 }: EditTransactionModalProps) => {
@@ -227,7 +226,32 @@ const EditTransactionModal = ({
             <View style={styles.buttonContainer}>
               <CustomButton
                 title={'Save Changes'}
-                onPress={handleSave}
+                onPress={async () => {
+                  if (!transaction || !selectedCategory) {
+                    return;
+                  }
+
+                  const numericAmount = Number(amount);
+
+                  if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+                    return;
+                  }
+
+                  setSubmitting(true);
+
+                  try {
+                    await handleSave({
+                      title: title.trim(),
+                      description: description.trim(),
+                      amount: numericAmount,
+                      date: date.toISOString(),
+                      type,
+                      categoryId: selectedCategory._id,
+                    });
+                  } finally {
+                    setSubmitting(false);
+                  }
+                }}
                 loading={isSubmitting || isDeleting}
               />
             </View>
@@ -315,6 +339,181 @@ const EditTransactionModal = ({
   );
 };
 
-const styles = StyleSheet.create({});
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  content: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 28,
+  },
+  segmentContainer: {
+    height: 46,
+    marginBottom: 8,
+  },
+  segmentTab: {
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+  },
+  segmentActiveTab: {},
+  segmentTabText: {
+    color: '#64748B',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  segmentActiveTabText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  label: {
+    color: '#334155',
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 8,
+    marginTop: 18,
+  },
+  optional: {
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
+  amountInputContainer: {
+    height: 78,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 16,
+    paddingHorizontal: 18,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  currencySymbol: {
+    fontSize: 30,
+    fontWeight: '800',
+    marginRight: 8,
+  },
+  amountInput: {
+    flex: 1,
+    fontSize: 30,
+    fontWeight: '700',
+    padding: 0,
+  },
+  input: {
+    minHeight: 54,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    color: '#0F172A',
+    fontSize: 15,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  descriptionInput: {
+    minHeight: 110,
+    paddingTop: 15,
+  },
+  selectInput: {
+    height: 54,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  categoryContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  categoryColor: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 12,
+  },
+  dateIcon: {
+    marginRight: 10,
+  },
+  selectText: {
+    color: '#0F172A',
+    fontSize: 15,
+  },
+  placeholderText: {
+    color: '#94A3B8',
+  },
+  buttonContainer: {
+    marginTop: 32,
+  },
+  deleteLink: {
+    marginTop: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+  },
+  deleteLinkText: {
+    color: EXPENSE_COLOR,
+    fontSize: 14,
+    fontWeight: '700',
+    marginLeft: 6,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(15, 23, 42, 0.42)',
+  },
+  categorySheet: {
+    maxHeight: '70%',
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    padding: 20,
+    paddingBottom: 34,
+    backgroundColor: '#FFFFFF',
+  },
+  sheetHandle: {
+    width: 42,
+    height: 5,
+    borderRadius: 3,
+    alignSelf: 'center',
+    backgroundColor: '#CBD5E1',
+    marginBottom: 20,
+  },
+  sheetTitle: {
+    color: '#0F172A',
+    fontSize: 20,
+    fontWeight: '800',
+    marginBottom: 14,
+  },
+  categoryOption: {
+    minHeight: 56,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 14,
+    marginTop: 6,
+  },
+  categoryName: {
+    flex: 1,
+    color: '#334155',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptyText: {
+    color: '#64748B',
+    fontSize: 15,
+    textAlign: 'center',
+    paddingVertical: 28,
+  },
+  selectedCategoryOption: {
+    backgroundColor: '#EEF2FF',
+  },
+});
 
 export default EditTransactionModal;

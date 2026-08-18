@@ -29,6 +29,13 @@ import { COLORS } from '../../constants/colors';
 import CustomButton from '../../components/CustomButton';
 import Header from '../../components/Header';
 import EditTransactionModal from '../../components/EditTransactionModal';
+import {
+  Transaction,
+  TransactionRowProps,
+  TransactionsListResponse,
+  TransactionType,
+  UpdateTransactionPayload,
+} from '../../types/Transactions';
 
 type RootStackParamList = {
   Transactions: undefined;
@@ -36,34 +43,6 @@ type RootStackParamList = {
 };
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Transactions'>;
-
-type TransactionType = 'income' | 'expense';
-
-type Transaction = {
-  _id: string;
-  userId: string;
-  categoryId: string;
-  type: TransactionType;
-  title: string;
-  description: string;
-  amount: string;
-  date: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
-type TransactionsListResponse = {
-  success: boolean;
-  data: {
-    transactions: Transaction[];
-    pagination: {
-      page: number;
-      limit: number;
-      total: number;
-      totalPages: number;
-    };
-  };
-};
 
 type MutationResponse = {
   success: boolean;
@@ -75,14 +54,6 @@ type TypeFilter = 'all' | TransactionType;
 
 const EXPENSE_COLOR = '#EF4444';
 const PAGE_LIMIT = 20;
-
-const formatDisplayDate = (value: Date) =>
-  value.toLocaleDateString(undefined, {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
 
 const formatListDate = (value: string) =>
   new Date(value).toLocaleDateString(undefined, {
@@ -97,12 +68,6 @@ const formatAmount = (value: number) =>
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(value);
-
-type TransactionRowProps = {
-  transaction: Transaction;
-  category?: Category;
-  onPress: () => void;
-};
 
 const TransactionRow = ({
   transaction,
@@ -231,6 +196,95 @@ const TransactionsScreen = ({ navigation }: Props) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typeFilter]);
 
+  const handleUpdateTransaction = async (data: UpdateTransactionPayload) => {
+    if (!editingTransaction) {
+      return;
+    }
+
+    try {
+      const response = await api.put(
+        `/transactions/${editingTransaction._id}`,
+        data,
+      );
+
+      if (!response.success || !response.data?.transaction) {
+        throw new Error(response.message ?? 'Failed to update transaction.');
+      }
+
+      const updatedTransaction = response.data.transaction;
+
+      setTransactions(prev =>
+        prev.map(item =>
+          item._id === updatedTransaction._id ? updatedTransaction : item,
+        ),
+      );
+
+      setEditingTransaction(null);
+
+      ToastAndroid.show(
+        'Transaction updated successfully.',
+        ToastAndroid.SHORT,
+      );
+    } catch (error: unknown) {
+      Alert.alert(
+        'Unable to update transaction.',
+        error?.message ?? 'Something went wrong. Please try again.',
+      );
+    }
+  };
+
+  const handleDeleteTransaction = async () => {
+    if (!editingTransaction) {
+      return;
+    }
+
+    Alert.alert(
+      'Delete Transaction',
+      'Are you sure you want to delete this transaction?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const response = await api.delete(
+                `/transactions/${editingTransaction._id}`,
+              );
+
+              if (!response.success) {
+                throw new Error(
+                  response.message ?? 'Failed to delete transaction.',
+                );
+              }
+
+              setTransactions(prev =>
+                prev.filter(item => item._id !== editingTransaction._id),
+              );
+
+              setTotal(prev => Math.max(0, prev - 1));
+
+              setEditingTransaction(null);
+
+              ToastAndroid.show(
+                'Transaction deleted successfully.',
+                ToastAndroid.SHORT,
+              );
+            } catch (error) {
+              Alert.alert(
+                'Unable to delete transaction.',
+                error?.message ?? 'Something went wrong. Please try again.',
+              );
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const handleRefresh = () => {
     loadTransactions(1, 'refresh');
   };
@@ -239,17 +293,6 @@ const TransactionsScreen = ({ navigation }: Props) => {
     if (!isLoadingMore && !isLoading && page < totalPages) {
       loadTransactions(page + 1, 'more');
     }
-  };
-
-  const handleSaved = (updated: Transaction) => {
-    setTransactions(prev =>
-      prev.map(item => (item._id === updated._id ? updated : item)),
-    );
-  };
-
-  const handleDeleted = (id: string) => {
-    setTransactions(prev => prev.filter(item => item._id !== id));
-    setTotal(prev => Math.max(0, prev - 1));
   };
 
   const typeFilterIndex =
@@ -351,8 +394,6 @@ const TransactionsScreen = ({ navigation }: Props) => {
         categories={categories}
         categoriesStatus={categoriesStatus}
         onClose={() => setEditingTransaction(null)}
-        onSaved={handleSaved}
-        onDeleted={handleDeleted}
         handleDelete={handleDeleteTransaction}
         handleSave={handleUpdateTransaction}
       />
