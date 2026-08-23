@@ -25,6 +25,7 @@ import { api } from '../../services/apiService';
 import { COLORS } from '../../constants/colors';
 import CustomButton from '../../components/CustomButton';
 import Header from '../../components/Header';
+import { getCurrencySymbol } from '../../utils/helpers';
 
 type RootStackParamList = {
   Home: undefined;
@@ -54,6 +55,8 @@ const toIsoDate = (value: Date) => value.toISOString().slice(0, 10);
 
 const AddTransactionScreen = ({ navigation, route }: Props) => {
   const dispatch = useDispatch<AppDispatch>();
+  const user = useSelector((state: RootState) => state.user.user);
+  const currencySymbol = getCurrencySymbol(user?.currency);
   const { categories, status } = useSelector(
     (state: RootState) => state.categories,
   );
@@ -71,8 +74,6 @@ const AddTransactionScreen = ({ navigation, route }: Props) => {
   );
   const [isCategoryModalVisible, setCategoryModalVisible] = useState(false);
   const [isSubmitting, setSubmitting] = useState(false);
-
-  console.log('date ===> ', date.toISOString());
 
   useEffect(() => {
     if (status === 'idle') {
@@ -126,8 +127,6 @@ const AddTransactionScreen = ({ navigation, route }: Props) => {
         amount: parsedAmount,
         date: toIsoDate(date),
       };
-
-      console.log('payload ====> ', payload);
 
       await api.post<AddTransactionResponse>('/transactions/add', payload);
 
@@ -193,7 +192,7 @@ const AddTransactionScreen = ({ navigation, route }: Props) => {
           <Text style={styles.label}>Amount</Text>
           <View style={styles.amountInputContainer}>
             <Text style={[styles.currencySymbol, { color: accentColor }]}>
-              $
+              {currencySymbol}
             </Text>
             <TextInput
               value={amount}

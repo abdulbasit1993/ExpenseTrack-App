@@ -29,6 +29,7 @@ import { COLORS } from '../../constants/colors';
 import CustomButton from '../../components/CustomButton';
 import Header from '../../components/Header';
 import EditTransactionModal from '../../components/EditTransactionModal';
+import { formatCurrency, getCurrencySymbol } from '../../utils/helpers';
 import {
   Transaction,
   TransactionRowProps,
@@ -63,17 +64,13 @@ const formatListDate = (value: string) =>
 
 const toIsoDate = (value: Date) => value.toISOString().slice(0, 10);
 
-const formatAmount = (value: number) =>
-  new Intl.NumberFormat(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
-
 const TransactionRow = ({
   transaction,
   category,
   onPress,
 }: TransactionRowProps) => {
+  const user = useSelector((state: RootState) => state.user.user);
+  const currencySymbol = getCurrencySymbol(user?.currency);
   const isExpense = transaction.type === 'expense';
   const amountColor = isExpense ? EXPENSE_COLOR : COLORS.SUCCESS;
 
@@ -104,7 +101,8 @@ const TransactionRow = ({
       </View>
 
       <Text style={[styles.rowAmount, { color: amountColor }]}>
-        {isExpense ? '-' : '+'}${formatAmount(transaction.amount)}
+        {isExpense ? '-' : '+'}
+        {formatCurrency(transaction.amount, currencySymbol)}
       </Text>
 
       <Icon

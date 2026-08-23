@@ -1,64 +1,70 @@
-import React from 'react';
-import { View, Text, StyleSheet, StatusBar, FlatList } from 'react-native';
+import React, { useCallback, useRef, useState } from 'react';
+import type { ComponentProps } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  StatusBar,
+  Alert,
+  ActivityIndicator,
+  RefreshControl,
+} from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
+import { useFocusEffect } from '@react-navigation/native';
 import type { RootState } from '../../store/store';
+import Icon from '@react-native-vector-icons/ionicons';
 import { COLORS } from '../../constants/colors';
+import { formatCurrency, getCurrencySymbol } from '../../utils/helpers';
+import { api } from '../../services/apiService';
+import type {
+  DashboardData,
+  DashboardResponse,
+  DashboardSummary,
+  RecentTransaction,
+} from '../../types/Dashboard';
 
-const USERNAME = 'Alex';
+const RECENT_TRANSACTIONS_LIMIT = 5;
 
-const summary = {
-  currentBalance: 12540.75,
-  totalIncome: 18500,
-  totalExpenses: 5959.25,
-  monthlyBudget: 8000,
-  monthlySpent: 4250,
+type IconName = ComponentProps<typeof Icon>['name'];
+
+// Fallback values for the summary when the request fails
+const EMPTY_SUMMARY: DashboardSummary = {
+  currentBalance: 0,
+  totalIncome: 0,
+  totalExpenses: 0,
+  monthlyBudget: 0,
+  monthlySpent: 0,
 };
 
-const recentTransactions = [
-  {
-    id: '1',
-    title: 'Grocery Shopping',
-    category: 'Food & Dining',
-    date: 'Today, 10:30 AM',
-    amount: -86.4,
-    icon: '🛒',
-    iconBackground: '#EEF2FF',
-  },
-  {
-    id: '2',
-    title: 'Salary Deposit',
-    category: 'Income',
-    date: 'Yesterday, 9:00 AM',
-    amount: 3500,
-    icon: '💼',
-    iconBackground: '#ECFDF3',
-  },
-  {
-    id: '3',
-    title: 'Netflix',
-    category: 'Entertainment',
-    date: 'May 18, 2026',
-    amount: -15.99,
-    icon: '🎬',
-    iconBackground: '#F5F3FF',
-  },
-  {
-    id: '4',
-    title: 'Online Cab Ride',
-    category: 'Transport',
-    date: 'May 17, 2026',
-    amount: -22.5,
-    icon: '🚗',
-    iconBackground: '#FFF7ED',
-  },
-];
+const buildDashboardEndpoint = ({
+  limit,
+  month,
+  year,
+}: {
+  limit?: number;
+  month?: number;
+  year?: number;
+}) => {
+  const params = new URLSearchParams();
 
-const formatCurrency = (amount: number) =>
-  `$${Math.abs(amount).toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
+  if (limit !== undefined) {
+    params.set('limit', String(limit));
+  }
+
+  if (month !== undefined) {
+    params.set('month', String(month));
+  }
+
+  if (year !== undefined) {
+    params.set('year', String(year));
+  }
+
+  const queryString = params.toString();
+
+  return queryString ? `/dashboard?${queryString}` : '/dashboard';
+};
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -74,29 +80,92 @@ const getGreeting = () => {
   return 'Good Evening';
 };
 
+const formatTransactionDate = (value: string) =>
+  new Date(value).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+  });
+
 const HomeScreen = () => {
   const user = useSelector((state: RootState) => state.user.user);
+  const currencySymbol = getCurrencySymbol(user?.currency);
 
-  const spendingProgress = (summary.monthlySpent / summary.monthlyBudget) * 100;
+  const [dashboard, setDashboard] = useState<DashboardData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setRefreshing] = useState(false);
+  const hasLoadedOnce = useRef(false);
 
-  const renderTransaction = ({ item }) => {
+  const loadDashboard = useCallback(async (mode: 'initial' | 'refresh') => {
+    try {
+      if (mode === 'initial') {
+        setIsLoading(true);
+      } else {
+        setRefreshing(true);
+      }
+
+      const response = await api.get<DashboardResponse>(
+        buildDashboardEndpoint({ limit: RECENT_TRANSACTIONS_LIMIT }),
+      );
+
+      if (!response.success || !response.data) {
+        throw new Error('Unable to load dashboard data.');
+      }
+
+      setDashboard(response.data);
+    } catch (error: any) {
+      Alert.alert(
+        'Unable to load dashboard.',
+        error?.message ?? 'Something went wrong. Please try again.',
+      );
+    } finally {
+      setIsLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadDashboard(hasLoadedOnce.current ? 'refresh' : 'initial');
+      hasLoadedOnce.current = true;
+    }, [loadDashboard]),
+  );
+
+  const summary = dashboard?.summary ?? EMPTY_SUMMARY;
+  const recentTransactions = dashboard?.recentTransactions ?? [];
+
+  const spendingProgress =
+    summary.monthlyBudget > 0
+      ? (summary.monthlySpent / summary.monthlyBudget) * 100
+      : 0;
+
+  const remainingBudget = summary.monthlyBudget - summary.monthlySpent;
+
+  const renderTransaction = ({ item }: { item: RecentTransaction }) => {
     const isIncome = item.amount > 0;
+
+    const categoryIcon = item.category?.icon ?? (isIncome ? '💼' : '🧾');
+
+    const iconBackground = item.category?.color
+      ? `${item.category.color}1F`
+      : '#EEF2FF';
 
     return (
       <View style={styles.transactionItem}>
         <View
           style={[
             styles.transactionIconContainer,
-            { backgroundColor: item.iconBackground },
+            { backgroundColor: iconBackground },
           ]}
         >
-          <Text style={styles.transactionIcon}>{item.icon}</Text>
+          {/* <Text style={styles.transactionIcon}>{categoryIcon}</Text> */}
+          <Icon name={categoryIcon as IconName} size={18} color="#000000" />
         </View>
 
         <View style={styles.transactionDetails}>
           <Text style={styles.transactionTitle}>{item.title}</Text>
           <Text style={styles.transactionMeta}>
-            {item.category} • {item.date}
+            {item.category?.name ?? 'Uncategorized'} •{' '}
+            {formatTransactionDate(item.date)}
           </Text>
         </View>
 
@@ -107,7 +176,7 @@ const HomeScreen = () => {
           ]}
         >
           {isIncome ? '+' : '-'}
-          {formatCurrency(item.amount)}
+          {formatCurrency(item.amount, currencySymbol)}
         </Text>
       </View>
     );
@@ -134,7 +203,7 @@ const HomeScreen = () => {
         <View style={styles.balanceCard}>
           <Text style={styles.balanceLabel}>Current Balance</Text>
           <Text style={styles.balanceAmount}>
-            {formatCurrency(summary.currentBalance)}
+            {formatCurrency(summary.currentBalance, currencySymbol)}
           </Text>
 
           <View style={styles.balanceDivider} />
@@ -147,7 +216,7 @@ const HomeScreen = () => {
               <View>
                 <Text style={styles.detailLabel}>Total Income</Text>
                 <Text style={styles.detailAmount}>
-                  {formatCurrency(summary.totalIncome)}
+                  {formatCurrency(summary.totalIncome, currencySymbol)}
                 </Text>
               </View>
             </View>
@@ -159,7 +228,7 @@ const HomeScreen = () => {
               <View>
                 <Text style={styles.detailLabel}>Total Expenses</Text>
                 <Text style={styles.detailAmount}>
-                  {formatCurrency(summary.totalExpenses)}
+                  {formatCurrency(summary.totalExpenses, currencySymbol)}
                 </Text>
               </View>
             </View>
@@ -168,17 +237,20 @@ const HomeScreen = () => {
 
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Monthly Spending</Text>
-          <Text style={styles.monthLabel}>May 2026</Text>
+          <Text style={styles.monthLabel}>
+            {dashboard?.month.label ?? 'This Month'}
+          </Text>
         </View>
 
         <View style={styles.spendingCard}>
           <View style={styles.spendingTopRow}>
             <View>
               <Text style={styles.spendingAmount}>
-                {formatCurrency(summary.monthlySpent)}
+                {formatCurrency(summary.monthlySpent, currencySymbol)}
               </Text>
               <Text style={styles.budgetText}>
-                of {formatCurrency(summary.monthlyBudget)} budget
+                of {formatCurrency(summary.monthlyBudget, currencySymbol)}{' '}
+                budget
               </Text>
             </View>
 
@@ -198,10 +270,19 @@ const HomeScreen = () => {
             />
           </View>
 
-          <Text style={styles.remainingText}>
-            {formatCurrency(summary.monthlyBudget - summary.monthlySpent)}{' '}
-            remaining this month
-          </Text>
+          {summary.monthlyBudget > 0 && (
+            <Text
+              style={[
+                styles.remainingText,
+                remainingBudget < 0 && styles.overBudgetText,
+              ]}
+            >
+              {formatCurrency(Math.abs(remainingBudget), currencySymbol)}{' '}
+              {remainingBudget >= 0
+                ? 'remaining this month'
+                : 'over budget this month'}
+            </Text>
+          )}
         </View>
 
         <View style={styles.sectionHeader}>
@@ -216,15 +297,29 @@ const HomeScreen = () => {
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <StatusBar barStyle={'dark-content'} backgroundColor="#F8FAFC" />
 
-      <FlatList
-        data={recentTransactions}
-        renderItem={renderTransaction}
-        keyExtractor={item => item.id}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
-        ListHeaderComponent={renderHeader}
-        ListFooterComponent={<View style={styles.footerSpacing} />}
-      />
+      {isLoading ? (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={COLORS.PRIMARY} />
+        </View>
+      ) : (
+        <FlashList
+          data={recentTransactions}
+          renderItem={renderTransaction}
+          keyExtractor={item => item.id}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.content}
+          ListHeaderComponent={renderHeader}
+          ListFooterComponent={<View style={styles.footerSpacing} />}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={() => loadDashboard('refresh')}
+              tintColor={COLORS.PRIMARY}
+              colors={[COLORS.PRIMARY]}
+            />
+          }
+        />
+      )}
     </SafeAreaView>
   );
 };
@@ -237,6 +332,11 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 20,
     paddingTop: 14,
+  },
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   greetingContainer: {
     flexDirection: 'row',
@@ -400,6 +500,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     marginTop: 10,
+  },
+  overBudgetText: {
+    color: '#EF4444',
   },
   seeAll: {
     color: COLORS.PRIMARY,

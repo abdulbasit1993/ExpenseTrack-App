@@ -16,6 +16,8 @@ import {
   EditTransactionModalProps,
   TransactionType,
 } from '../types/Transactions';
+import { useSelector } from 'react-redux';
+import type { RootState } from '../store/store';
 import { Category } from '../store/categoriesSlice';
 import { COLORS } from '../constants/colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -24,7 +26,7 @@ import SegmentedControlTab from 'react-native-segmented-control-tab';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import Icon from '@react-native-vector-icons/ionicons';
 import CustomButton from './CustomButton';
-import { formatDisplayDate } from '../utils/helpers';
+import { formatDisplayDate, getCurrencySymbol } from '../utils/helpers';
 
 const EXPENSE_COLOR = '#EF4444';
 
@@ -37,6 +39,8 @@ const EditTransactionModal = ({
   handleDelete,
   handleSave,
 }: EditTransactionModalProps) => {
+  const user = useSelector((state: RootState) => state.user.user);
+  const currencySymbol = getCurrencySymbol(user?.currency);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
@@ -127,7 +131,7 @@ const EditTransactionModal = ({
             <Text style={styles.label}>Amount</Text>
             <View style={styles.amountInputContainer}>
               <Text style={[styles.currencySymbol, { color: accentColor }]}>
-                $
+                {currencySymbol}
               </Text>
               <TextInput
                 value={amount}
