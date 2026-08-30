@@ -3,4 +3,4 @@ let URLs = {
   production: 'https://expensetrack-backend.expensetrack224.deno.net/api',
 };
 
-export const BASE_URL = URLs.development;
+export const BASE_URL = URLs.production;

@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
+  TouchableOpacity,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -24,6 +25,7 @@ import type {
   DashboardSummary,
   RecentTransaction,
 } from '../../types/Dashboard';
+import EditBudgetModal from '../../components/EditBudgetModal';
 
 const RECENT_TRANSACTIONS_LIMIT = 5;
 
@@ -94,6 +96,7 @@ const HomeScreen = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setRefreshing] = useState(false);
   const hasLoadedOnce = useRef(false);
+  const [isBudgetModalVisible, setBudgetModalVisible] = useState(false);
 
   const loadDashboard = useCallback(async (mode: 'initial' | 'refresh') => {
     try {
@@ -130,15 +133,17 @@ const HomeScreen = () => {
     }, [loadDashboard]),
   );
 
+  const localBudget = user?.monthlyBudget ?? 0;
   const summary = dashboard?.summary ?? EMPTY_SUMMARY;
+  const effectiveBudget =
+    dashboard?.summary && localBudget > 0 ? localBudget : summary.monthlyBudget;
+
   const recentTransactions = dashboard?.recentTransactions ?? [];
 
   const spendingProgress =
-    summary.monthlyBudget > 0
-      ? (summary.monthlySpent / summary.monthlyBudget) * 100
-      : 0;
+    effectiveBudget > 0 ? (summary.monthlySpent / effectiveBudget) * 100 : 0;
 
-  const remainingBudget = summary.monthlyBudget - summary.monthlySpent;
+  const remainingBudget = effectiveBudget - summary.monthlySpent;
 
   const renderTransaction = ({ item }: { item: RecentTransaction }) => {
     const isIncome = item.amount > 0;
@@ -249,15 +254,28 @@ const HomeScreen = () => {
                 {formatCurrency(summary.monthlySpent, currencySymbol)}
               </Text>
               <Text style={styles.budgetText}>
-                of {formatCurrency(summary.monthlyBudget, currencySymbol)}{' '}
-                budget
+                of {formatCurrency(effectiveBudget, currencySymbol)} budget
               </Text>
             </View>
 
-            <View style={styles.progressPercentage}>
-              <Text style={styles.progressPercentageText}>
-                {Math.round(spendingProgress)}%
-              </Text>
+            <View style={styles.spendingRight}>
+              <View style={styles.progressPercentage}>
+                <Text style={styles.progressPercentageText}>
+                  {Math.round(spendingProgress)}%
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                onPress={() => setBudgetModalVisible(true)}
+                style={styles.editBudgetButton}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Edit monthly budget"
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Icon name="pencil" size={14} color={COLORS.PRIMARY_DARK} />
+                <Text style={styles.editBudgetText}>Edit</Text>
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -270,7 +288,7 @@ const HomeScreen = () => {
             />
           </View>
 
-          {summary.monthlyBudget > 0 && (
+          {effectiveBudget > 0 && (
             <Text
               style={[
                 styles.remainingText,
@@ -320,6 +338,15 @@ const HomeScreen = () => {
           }
         />
       )}
+
+      {/* ======== EditBudgetModal ======== */}
+      <EditBudgetModal
+        visible={isBudgetModalVisible}
+        onClose={() => setBudgetModalVisible(false)}
+        onSaved={() => {
+          loadDashboard('refresh');
+        }}
+      />
     </SafeAreaView>
   );
 };
@@ -462,6 +489,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  spendingRight: {
+    alignItems: 'flex-end',
+    gap: 8,
+  },
   spendingAmount: {
     color: '#0F172A',
     fontSize: 24,
@@ -481,6 +512,20 @@ const styles = StyleSheet.create({
   progressPercentageText: {
     color: COLORS.PRIMARY_DARK,
     fontSize: 13,
+    fontWeight: '800',
+  },
+  editBudgetButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: '#EEF2FF',
+  },
+  editBudgetText: {
+    color: COLORS.PRIMARY_DARK,
+    fontSize: 12,
     fontWeight: '800',
   },
   progressTrack: {

@@ -4,12 +4,15 @@ import HomeTabs from './HomeTabs';
 import AuthStack from './AuthStack';
 import SplashScreen from '../screens/SplashScreen';
 import AddTransactionScreen from '../screens/Home/AddTransactionScreen';
+import PreferencesScreen from '../screens/Home/PreferencesScreen';
 import { useAuth } from '../context/AuthContext';
 
 export type RootStackParamList = {
   Auth: undefined;
   Home: undefined;
   AddTransaction: { type?: 'income' | 'expense' };
+  Preferences: undefined;
+  Profile: undefined;
 };
 
 const Stack = createNativeStackNavigator();
@@ -38,6 +41,7 @@ function RootStack() {
             name="AddTransaction"
             component={AddTransactionScreen}
           />
+          <Stack.Screen name="Preferences" component={PreferencesScreen} />
         </>
       )}
     </Stack.Navigator>

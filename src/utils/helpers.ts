@@ -41,4 +41,10 @@ const formatCurrency = (
     maximumFractionDigits: 2,
   })}`;
 
-export { formatDisplayDate, getCurrencySymbol, formatCurrency };
+export {
+  formatDisplayDate,
+  getCurrencySymbol,
+  formatCurrency,
+  CURRENCY_SYMBOLS,
+  DEFAULT_CURRENCY_SYMBOL,
+};

@@ -21,6 +21,7 @@
     "@shopify/flash-list": "^2.3.2",
     "react": "19.2.3",
     "react-native": "0.85.3",
+    "react-native-image-picker": "^8.2.1",
     "react-native-keychain": "^10.0.0",
     "react-native-linear-gradient": "^2.8.3",
     "react-native-modal-datetime-picker": "^18.0.0",
