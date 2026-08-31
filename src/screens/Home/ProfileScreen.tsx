@@ -50,22 +50,23 @@ type FormState = {
   profileImage: string;
 };
 
-const isValidEmail = (value: string) =>
-  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
-
 const isValidName = (value: string) => value.trim().length >= 1;
 
 const ProfileScreen = () => {
   const navigation = useNavigation<ProfileScreenNavigationProp>();
   const dispatch = useDispatch<AppDispatch>();
 
-  const user = useSelector((state: RootState) => state.user.user) as User | null;
+  const user = useSelector(
+    (state: RootState) => state.user.user,
+  ) as User | null;
   const status = useSelector((state: RootState) => state.user.status);
   const fetchError = useSelector((state: RootState) => state.user.error);
   const profileStatus = useSelector(
     (state: RootState) => state.user.profileStatus,
   );
-  const profileError = useSelector((state: RootState) => state.user.profileError);
+  const profileError = useSelector(
+    (state: RootState) => state.user.profileError,
+  );
 
   const [form, setForm] = useState<FormState>({
     firstName: '',
@@ -110,7 +111,6 @@ const ProfileScreen = () => {
     return (
       form.firstName !== original.firstName ||
       form.lastName !== original.lastName ||
-      form.email !== original.email ||
       form.profileImage !== original.profileImage
     );
   }, [form, original, localImageAsset]);
@@ -136,11 +136,6 @@ const ProfileScreen = () => {
     }
     if (!isValidName(form.lastName)) {
       errors.lastName = 'Last name is required.';
-    }
-    if (!form.email.trim()) {
-      errors.email = 'Email is required.';
-    } else if (!isValidEmail(form.email)) {
-      errors.email = 'Enter a valid email address.';
     }
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
@@ -290,10 +285,7 @@ const ProfileScreen = () => {
   if (status === 'loading' && !user) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
-        <Header
-          title={'Profile'}
-          subtitle="Manage your account and settings"
-        />
+        <Header title={'Profile'} subtitle="Manage your account and settings" />
 
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color={COLORS.PRIMARY} />
@@ -426,29 +418,23 @@ const ProfileScreen = () => {
             {/* Email */}
             <View style={styles.fieldCard}>
               <Text style={styles.fieldLabel}>Email</Text>
-              <View
-                style={[
-                  styles.inputRow,
-                  fieldErrors.email ? styles.inputRowError : null,
-                ]}
-              >
+              <View style={styles.inputRow}>
                 <Icon name="mail-outline" size={18} color={COLORS.SECONDARY} />
                 <TextInput
                   value={form.email}
-                  onChangeText={text => handleChange('email', text)}
-                  placeholder="Enter email address"
+                  placeholder="No email on file"
                   placeholderTextColor={'#94A3B8'}
-                  style={styles.input}
+                  style={[styles.input, styles.inputReadonly]}
                   autoCapitalize="none"
                   autoCorrect={false}
                   keyboardType="email-address"
-                  editable={!isSaving}
-                  returnKeyType="done"
+                  editable={false}
+                  selectTextOnFocus={false}
                 />
               </View>
-              {fieldErrors.email ? (
-                <Text style={styles.errorText}>{fieldErrors.email}</Text>
-              ) : null}
+              {/* <Text style={styles.fieldHint}>
+                Email cannot be changed from here.
+              </Text> */}
             </View>
 
             {profileError ? (
@@ -655,6 +641,15 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     fontSize: 15,
     paddingVertical: 12,
+  },
+  inputReadonly: {
+    backgroundColor: '#F1F5F9',
+  },
+  fieldHint: {
+    color: '#64748B',
+    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 4,
   },
   errorText: {
     color: '#B91C1C',
