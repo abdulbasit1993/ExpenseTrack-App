@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -27,8 +27,20 @@ import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import Icon from '@react-native-vector-icons/ionicons';
 import CustomButton from './CustomButton';
 import { formatDisplayDate, getCurrencySymbol } from '../utils/helpers';
+import { BASE_URL } from '../config/apiUrl';
+import { getJwtToken } from '../utils/storeToken';
 
 const EXPENSE_COLOR = '#EF4444';
+
+type AICategorySuggestionResponse = {
+  success: boolean;
+  message?: string;
+  data?: {
+    categoryId: string;
+    categoryName: string;
+    confidence: number;
+  };
+};
 
 const EditTransactionModal = ({
   visible,
@@ -53,6 +65,12 @@ const EditTransactionModal = ({
   const [isCategoryModalVisible, setCategoryModalVisible] = useState(false);
   const [isSubmitting, setSubmitting] = useState(false);
   const [isDeleting, setDeleting] = useState(false);
+  const [isAISuggesting, setIsAISuggesting] = useState(false);
+  const [aiSuggestion, setAiSuggestion] = useState<{
+    categoryId: string;
+    categoryName: string;
+    confidence: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!transaction) {
@@ -82,6 +100,47 @@ const EditTransactionModal = ({
   }, [categories, type]);
 
   const accentColor = type === 'expense' ? EXPENSE_COLOR : COLORS.SUCCESS;
+
+  const handleAISuggestCategory = useCallback(async () => {
+    if (!title.trim() && !description.trim()) {
+      return;
+    }
+
+    setIsAISuggesting(true);
+    setAiSuggestion(null);
+
+    try {
+      const token = await getJwtToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      const response = await fetch(`${BASE_URL}/ai/suggest-category`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ title: title.trim(), description: description.trim(), type }),
+      });
+      let data: any = null;
+      try { data = await response.json(); } catch { data = null; }
+      if (!response.ok) throw new Error(data?.message ?? 'Failed to get suggestion');
+      if (data?.success && data.data) {
+        const cat = categories.find(c => c._id === data.data.categoryId);
+        if (cat) {
+          setAiSuggestion({ categoryId: cat._id, categoryName: cat.name, confidence: data.data.confidence });
+        }
+      }
+    } catch (error: any) {
+      console.error('AI Suggestion Error:', error);
+    } finally {
+      setIsAISuggesting(false);
+    }
+  }, [title, description, type, categories]);
+
+  const handleApplyAISuggestion = useCallback(() => {
+    if (aiSuggestion) {
+      const cat = categories.find(c => c._id === aiSuggestion.categoryId);
+      if (cat) { setSelectedCategory(cat); setAiSuggestion(null); }
+    }
+  }, [aiSuggestion, categories]);
 
   return (
     <Modal
@@ -154,34 +213,64 @@ const EditTransactionModal = ({
             />
 
             <Text style={styles.label}>Category</Text>
-            <TouchableOpacity
-              style={styles.selectInput}
-              onPress={() => setCategoryModalVisible(true)}
-              activeOpacity={0.8}
-            >
-              <View style={styles.categoryContent}>
-                {selectedCategory && (
-                  <View
+            <View style={styles.categoryRow}>
+              <TouchableOpacity
+                style={styles.selectInput}
+                onPress={() => setCategoryModalVisible(true)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.categoryContent}>
+                  {selectedCategory && (
+                    <View
+                      style={[
+                        styles.categoryColor,
+                        {
+                          backgroundColor:
+                            selectedCategory.color || COLORS.PRIMARY,
+                        },
+                      ]}
+                    />
+                  )}
+                  <Text
                     style={[
-                      styles.categoryColor,
-                      {
-                        backgroundColor:
-                          selectedCategory.color || COLORS.PRIMARY,
-                      },
+                      styles.selectText,
+                      !selectedCategory && styles.placeholderText,
                     ]}
-                  />
+                  >
+                    {selectedCategory?.name ?? 'Select a category'}
+                  </Text>
+                </View>
+                <Icon name="chevron-down" size={18} color="#64748B" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.aiSuggestButton, isAISuggesting && styles.aiSuggestButtonLoading]}
+                onPress={handleAISuggestCategory}
+                disabled={isAISuggesting || (!title.trim() && !description.trim())}
+                activeOpacity={0.8}
+              >
+                {isAISuggesting ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Icon name="sparkles" size={20} color="#FFFFFF" />
                 )}
-                <Text
-                  style={[
-                    styles.selectText,
-                    !selectedCategory && styles.placeholderText,
-                  ]}
-                >
-                  {selectedCategory?.name ?? 'Select a category'}
-                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {aiSuggestion && (
+              <View style={styles.aiSuggestionBanner}>
+                <View style={styles.aiSuggestionContent}>
+                  <Icon name="sparkles" size={16} color={COLORS.PRIMARY} />
+                  <Text style={styles.aiSuggestionText}>
+                    AI: <Text style={styles.aiSuggestionCategory}>{aiSuggestion.categoryName}</Text>
+                    {' '}<Text style={styles.aiSuggestionConfidence}>({Math.round(aiSuggestion.confidence * 100)}%)</Text>
+                  </Text>
+                </View>
+                <TouchableOpacity style={styles.aiSuggestionApplyButton} onPress={handleApplyAISuggestion} activeOpacity={0.8}>
+                  <Text style={styles.aiSuggestionApplyText}>Apply</Text>
+                </TouchableOpacity>
               </View>
-              <Icon name="chevron-down" size={18} color="#64748B" />
-            </TouchableOpacity>
+            )}
 
             <Text style={styles.label}>Date</Text>
             <TouchableOpacity
@@ -518,6 +607,47 @@ const styles = StyleSheet.create({
   selectedCategoryOption: {
     backgroundColor: '#EEF2FF',
   },
+  categoryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  aiSuggestButton: {
+    height: 54,
+    width: 54,
+    borderRadius: 14,
+    backgroundColor: COLORS.PRIMARY,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  aiSuggestButtonLoading: { opacity: 0.7 },
+  aiSuggestionBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+    padding: 12,
+    backgroundColor: '#EEF2FF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
+  aiSuggestionContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  aiSuggestionText: { color: '#3730A3', fontSize: 13, fontWeight: '500' },
+  aiSuggestionCategory: { fontWeight: '700', color: '#312E81' },
+  aiSuggestionConfidence: { color: '#6366F1', fontSize: 12 },
+  aiSuggestionApplyButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: COLORS.PRIMARY,
+    borderRadius: 8,
+  },
+  aiSuggestionApplyText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
 });
 
 export default EditTransactionModal;
