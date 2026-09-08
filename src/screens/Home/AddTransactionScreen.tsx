@@ -20,6 +20,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import SegmentedControlTab from 'react-native-segmented-control-tab';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import Icon from '@react-native-vector-icons/ionicons';
+import { s, vs } from 'react-native-size-matters';
 import type { AppDispatch, RootState } from '../../store/store';
 import { fetchCategories, type Category } from '../../store/categoriesSlice';
 import { api } from '../../services/apiService';
@@ -81,7 +82,6 @@ const AddTransactionScreen = ({ navigation, route }: Props) => {
   const [aiSuggestion, setAiSuggestion] = useState<{
     categoryId: string;
     categoryName: string;
-    confidence: number;
   } | null>(null);
 
   useEffect(() => {
@@ -149,12 +149,8 @@ const AddTransactionScreen = ({ navigation, route }: Props) => {
           setAiSuggestion({
             categoryId: cat._id,
             categoryName: cat.name,
-            confidence: data.data.confidence,
           });
-          ToastAndroid.show(
-            `AI: ${cat.name} (${Math.round(data.data.confidence * 100)}%)`,
-            ToastAndroid.SHORT,
-          );
+          ToastAndroid.show(`AI: ${cat.name}`, ToastAndroid.SHORT);
         }
       } else {
         throw new Error(data?.message ?? 'Failed to get suggestion');
@@ -340,7 +336,10 @@ const AddTransactionScreen = ({ navigation, route }: Props) => {
               {isAISuggesting ? (
                 <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
-                <Icon name="sparkles" size={20} color="#FFFFFF" />
+                <>
+                  <Icon name="sparkles" size={s(15)} color="#FFFFFF" />
+                  <Text style={styles.aiSuggestionButtonText}>AI Suggest</Text>
+                </>
               )}
             </TouchableOpacity>
           </View>
@@ -353,9 +352,6 @@ const AddTransactionScreen = ({ navigation, route }: Props) => {
                   AI:{' '}
                   <Text style={styles.aiSuggestionCategory}>
                     {aiSuggestion.categoryName}
-                  </Text>{' '}
-                  <Text style={styles.aiSuggestionConfidence}>
-                    ({Math.round(aiSuggestion.confidence * 100)}%)
                   </Text>
                 </Text>
               </View>
@@ -412,15 +408,15 @@ const AddTransactionScreen = ({ navigation, route }: Props) => {
             textAlignVertical="top"
             maxLength={250}
           />
-
-          <View style={styles.buttonContainer}>
-            <CustomButton
-              title={`Add ${type === 'expense' ? 'Expense' : 'Income'}`}
-              onPress={handleSubmit}
-              loading={isSubmitting}
-            />
-          </View>
         </ScrollView>
+
+        <View style={styles.fixedButtonContainer}>
+          <CustomButton
+            title={`Add ${type === 'expense' ? 'Expense' : 'Income'}`}
+            onPress={handleSubmit}
+            loading={isSubmitting}
+          />
+        </View>
       </KeyboardAvoidingView>
 
       <Modal
@@ -497,13 +493,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 28,
+    paddingHorizontal: s(20),
+    paddingTop: vs(20),
+    paddingBottom: vs(12),
   },
   segmentContainer: {
-    height: 46,
-    marginBottom: 8,
+    height: vs(44),
+    marginBottom: vs(8),
   },
   segmentTab: {
     borderColor: '#E2E8F0',
@@ -515,7 +511,7 @@ const styles = StyleSheet.create({
   segmentTabText: {
     color: '#64748B',
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: vs(14),
   },
   segmentActiveTabText: {
     color: '#FFFFFF',
@@ -523,54 +519,57 @@ const styles = StyleSheet.create({
   },
   label: {
     color: '#334155',
-    fontSize: 14,
+    fontSize: vs(14),
     fontWeight: '700',
-    marginBottom: 8,
-    marginTop: 18,
+    marginBottom: vs(8),
+    marginTop: vs(14),
   },
   optional: {
     color: '#94A3B8',
     fontWeight: '500',
   },
   amountInputContainer: {
-    height: 78,
+    height: vs(56),
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 16,
-    paddingHorizontal: 18,
+    borderRadius: s(14),
+    paddingHorizontal: s(16),
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
   currencySymbol: {
-    fontSize: 30,
+    fontSize: vs(26),
     fontWeight: '800',
-    marginRight: 8,
+    marginRight: s(8),
   },
   amountInput: {
     flex: 1,
-    fontSize: 30,
+    fontSize: vs(26),
     fontWeight: '700',
     padding: 0,
   },
   input: {
-    minHeight: 54,
-    borderRadius: 14,
-    paddingHorizontal: 16,
+    minHeight: vs(48),
+    borderRadius: s(14),
+    paddingHorizontal: s(16),
     color: '#0F172A',
-    fontSize: 15,
+    fontSize: vs(15),
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
   descriptionInput: {
-    minHeight: 110,
-    paddingTop: 15,
+    minHeight: vs(88),
+    paddingTop: vs(12),
   },
   selectInput: {
-    height: 54,
-    borderRadius: 14,
-    paddingHorizontal: 16,
+    height: vs(48),
+    flex: 7,
+    flexBasis: 0,
+    minWidth: 0,
+    borderRadius: s(14),
+    paddingHorizontal: s(12),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -583,17 +582,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dateIcon: {
-    marginRight: 10,
+    marginRight: s(10),
   },
   selectText: {
     color: '#0F172A',
-    fontSize: 15,
+    fontSize: vs(15),
   },
   placeholderText: {
     color: '#94A3B8',
-  },
-  buttonContainer: {
-    marginTop: 32,
   },
   modalOverlay: {
     flex: 1,
@@ -602,77 +598,83 @@ const styles = StyleSheet.create({
   },
   categorySheet: {
     maxHeight: '70%',
-    borderTopLeftRadius: 26,
-    borderTopRightRadius: 26,
-    padding: 20,
-    paddingBottom: 34,
+    borderTopLeftRadius: s(26),
+    borderTopRightRadius: s(26),
+    padding: s(20),
+    paddingBottom: vs(34),
     backgroundColor: '#FFFFFF',
   },
   sheetHandle: {
-    width: 42,
-    height: 5,
-    borderRadius: 3,
+    width: s(42),
+    height: vs(5),
+    borderRadius: s(3),
     alignSelf: 'center',
     backgroundColor: '#CBD5E1',
-    marginBottom: 20,
+    marginBottom: vs(20),
   },
   sheetTitle: {
     color: '#0F172A',
-    fontSize: 20,
+    fontSize: vs(20),
     fontWeight: '800',
-    marginBottom: 14,
+    marginBottom: vs(14),
   },
   categoryOption: {
-    minHeight: 56,
-    paddingHorizontal: 14,
+    minHeight: vs(50),
+    paddingHorizontal: s(14),
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 14,
-    marginTop: 6,
+    borderRadius: s(14),
+    marginTop: vs(6),
   },
   selectedCategoryOption: {
     backgroundColor: '#EEF2FF',
   },
   categoryColor: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 12,
+    width: s(12),
+    height: vs(12),
+    borderRadius: s(6),
+    marginRight: s(12),
   },
   categoryName: {
     flex: 1,
     color: '#334155',
-    fontSize: 16,
+    fontSize: vs(16),
     fontWeight: '600',
   },
   emptyText: {
     color: '#64748B',
-    fontSize: 15,
+    fontSize: vs(15),
     textAlign: 'center',
-    paddingVertical: 28,
+    paddingVertical: vs(28),
   },
   categoryRow: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: s(6),
   },
   aiSuggestButton: {
-    height: 54,
-    width: 54,
-    borderRadius: 14,
+    height: vs(42),
+    flex: 3,
+    flexBasis: 0,
+    minWidth: 0,
+    borderRadius: s(12),
     backgroundColor: COLORS.PRIMARY,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: s(5),
+    gap: s(4),
   },
   aiSuggestButtonLoading: { opacity: 0.7 },
   aiSuggestionBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 8,
-    padding: 12,
+    marginTop: vs(8),
+    padding: vs(10),
     backgroundColor: '#EEF2FF',
-    borderRadius: 12,
+    borderRadius: s(12),
     borderWidth: 1,
     borderColor: '#C7D2FE',
   },
@@ -680,18 +682,34 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: s(6),
   },
-  aiSuggestionText: { color: '#3730A3', fontSize: 13, fontWeight: '500' },
+  aiSuggestionText: { color: '#3730A3', fontSize: vs(13), fontWeight: '500' },
   aiSuggestionCategory: { fontWeight: '700', color: '#312E81' },
-  aiSuggestionConfidence: { color: '#6366F1', fontSize: 12 },
   aiSuggestionApplyButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: s(12),
+    paddingVertical: vs(6),
     backgroundColor: COLORS.PRIMARY,
-    borderRadius: 8,
+    borderRadius: s(8),
   },
-  aiSuggestionApplyText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+  aiSuggestionApplyText: {
+    color: '#FFFFFF',
+    fontSize: vs(13),
+    fontWeight: '700',
+  },
+  aiSuggestionButtonText: {
+    color: '#FFFFFF',
+    fontSize: vs(10),
+    fontWeight: '700',
+    flexShrink: 1,
+  },
+  fixedButtonContainer: {
+    paddingHorizontal: s(20),
+    paddingVertical: vs(12),
+    backgroundColor: '#F8FAFC',
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
 });
 
 export default AddTransactionScreen;
