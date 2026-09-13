@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState, useMemo } from 'react';
 import type { ComponentProps } from 'react';
 import {
   View,
@@ -16,8 +16,10 @@ import { useSelector } from 'react-redux';
 import { useFocusEffect } from '@react-navigation/native';
 import type { RootState } from '../../store/store';
 import Icon from '@react-native-vector-icons/ionicons';
-import { COLORS } from '../../constants/colors';
+import { COLORS, getThemeColors } from '../../constants/colors';
+import type { ThemeColors } from '../../constants/theme';
 import { formatCurrency, getCurrencySymbol } from '../../utils/helpers';
+import { useTheme } from '../../context/ThemeContext';
 import { api } from '../../services/apiService';
 import type {
   DashboardData,
@@ -90,6 +92,9 @@ const formatTransactionDate = (value: string) =>
 
 const HomeScreen = () => {
   const user = useSelector((state: RootState) => state.user.user);
+  const { isDarkMode } = useTheme();
+  const theme = getThemeColors(isDarkMode);
+  const styles = useMemo(() => themeStyles(theme), [theme]);
   const currencySymbol = getCurrencySymbol(user?.currency);
 
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
@@ -152,7 +157,7 @@ const HomeScreen = () => {
 
     const iconBackground = item.category?.color
       ? `${item.category.color}1F`
-      : '#EEF2FF';
+      : theme.selectedBg;
 
     return (
       <View style={styles.transactionItem}>
@@ -163,7 +168,11 @@ const HomeScreen = () => {
           ]}
         >
           {/* <Text style={styles.transactionIcon}>{categoryIcon}</Text> */}
-          <Icon name={categoryIcon as IconName} size={18} color="#000000" />
+          <Icon
+            name={categoryIcon as IconName}
+            size={18}
+            color={theme.textPrimary}
+          />
         </View>
 
         <View style={styles.transactionDetails}>
@@ -177,7 +186,7 @@ const HomeScreen = () => {
         <Text
           style={[
             styles.transactionAmount,
-            { color: isIncome ? COLORS.SUCCESS : COLORS.SECONDARY },
+            { color: isIncome ? COLORS.SUCCESS : theme.textSecondary },
           ]}
         >
           {isIncome ? '+' : '-'}
@@ -313,7 +322,10 @@ const HomeScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <StatusBar barStyle={'dark-content'} backgroundColor="#F8FAFC" />
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor={theme.background}
+      />
 
       {isLoading ? (
         <View style={styles.centered}>
@@ -351,248 +363,249 @@ const HomeScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 14,
-  },
-  centered: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  greetingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  greeting: {
-    color: COLORS.SECONDARY,
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  username: {
-    color: '#0F172A',
-    fontSize: 28,
-    fontWeight: '800',
-    marginTop: 2,
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.PRIMARY_LIGHT,
-  },
-  avatarText: {
-    color: COLORS.PRIMARY_DARK,
-    fontSize: 19,
-    fontWeight: '800',
-  },
-  balanceCard: {
-    borderRadius: 24,
-    padding: 22,
-    backgroundColor: COLORS.PRIMARY,
-    shadowColor: COLORS.PRIMARY_DARK,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  balanceLabel: {
-    color: '#E0E7FF',
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  balanceAmount: {
-    color: '#FFFFFF',
-    fontSize: 34,
-    fontWeight: '800',
-    marginTop: 5,
-  },
-  balanceDivider: {
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.22)',
-    marginVertical: 22,
-  },
-  incomeExpenseRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  balanceDetail: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  detailIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 9,
-  },
-  incomeIcon: {
-    backgroundColor: 'rgba(34,197,94,0.25)',
-  },
-  expenseIcon: {
-    backgroundColor: 'rgba(255,255,255,0.18)',
-  },
-  detailIconText: {
-    color: '#FFFFFF',
-    fontSize: 19,
-    fontWeight: '800',
-  },
-  detailLabel: {
-    color: '#E0E7FF',
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  detailAmount: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
-    marginTop: 3,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 28,
-    marginBottom: 13,
-  },
-  sectionTitle: {
-    color: '#0F172A',
-    fontSize: 19,
-    fontWeight: '800',
-  },
-  monthLabel: {
-    color: COLORS.SECONDARY,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  spendingCard: {
-    borderRadius: 20,
-    padding: 18,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  spendingTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  spendingRight: {
-    alignItems: 'flex-end',
-    gap: 8,
-  },
-  spendingAmount: {
-    color: '#0F172A',
-    fontSize: 24,
-    fontWeight: '800',
-  },
-  budgetText: {
-    color: COLORS.SECONDARY,
-    fontSize: 13,
-    marginTop: 4,
-  },
-  progressPercentage: {
-    borderRadius: 14,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: COLORS.PRIMARY_GLOW,
-  },
-  progressPercentageText: {
-    color: COLORS.PRIMARY_DARK,
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  editBudgetButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-    backgroundColor: '#EEF2FF',
-  },
-  editBudgetText: {
-    color: COLORS.PRIMARY_DARK,
-    fontSize: 12,
-    fontWeight: '800',
-  },
-  progressTrack: {
-    height: 9,
-    borderRadius: 5,
-    overflow: 'hidden',
-    backgroundColor: '#E2E8F0',
-    marginTop: 18,
-  },
-  progressBar: {
-    height: '100%',
-    borderRadius: 5,
-    backgroundColor: COLORS.AIACCENT,
-  },
-  remainingText: {
-    color: COLORS.SUCCESS,
-    fontSize: 13,
-    fontWeight: '600',
-    marginTop: 10,
-  },
-  overBudgetText: {
-    color: '#EF4444',
-  },
-  seeAll: {
-    color: COLORS.PRIMARY,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  transactionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-  },
-  transactionIconContainer: {
-    width: 46,
-    height: 46,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  transactionIcon: {
-    fontSize: 21,
-  },
-  transactionDetails: {
-    flex: 1,
-    marginLeft: 12,
-    marginRight: 8,
-  },
-  transactionTitle: {
-    color: '#0F172A',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  transactionMeta: {
-    color: COLORS.SECONDARY,
-    fontSize: 12,
-    marginTop: 4,
-  },
-  transactionAmount: {
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  footerSpacing: {
-    height: 110,
-  },
-});
+const themeStyles = (theme: ThemeColors) =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    content: {
+      paddingHorizontal: 20,
+      paddingTop: 14,
+    },
+    centered: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    greetingContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 24,
+    },
+    greeting: {
+      color: theme.textSecondary,
+      fontSize: 16,
+      fontWeight: '500',
+    },
+    username: {
+      color: theme.textPrimary,
+      fontSize: 28,
+      fontWeight: '800',
+      marginTop: 2,
+    },
+    avatar: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: COLORS.PRIMARY_LIGHT,
+    },
+    avatarText: {
+      color: COLORS.PRIMARY_DARK,
+      fontSize: 19,
+      fontWeight: '800',
+    },
+    balanceCard: {
+      borderRadius: 24,
+      padding: 22,
+      backgroundColor: COLORS.PRIMARY,
+      shadowColor: COLORS.PRIMARY_DARK,
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.2,
+      shadowRadius: 16,
+      elevation: 8,
+    },
+    balanceLabel: {
+      color: theme.textSecondary,
+      fontSize: 15,
+      fontWeight: '500',
+    },
+    balanceAmount: {
+      color: theme.textPrimary,
+      fontSize: 34,
+      fontWeight: '800',
+      marginTop: 5,
+    },
+    balanceDivider: {
+      height: 1,
+      backgroundColor: 'rgba(255,255,255,0.22)',
+      marginVertical: 22,
+    },
+    incomeExpenseRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+    },
+    balanceDetail: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+    },
+    detailIcon: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 9,
+    },
+    incomeIcon: {
+      backgroundColor: 'rgba(34,197,94,0.25)',
+    },
+    expenseIcon: {
+      backgroundColor: 'rgba(255,255,255,0.18)',
+    },
+    detailIconText: {
+      color: theme.textPrimary,
+      fontSize: 19,
+      fontWeight: '800',
+    },
+    detailLabel: {
+      color: theme.textPrimary,
+      fontSize: 12,
+      fontWeight: '500',
+    },
+    detailAmount: {
+      color: theme.textPrimary,
+      fontSize: 14,
+      fontWeight: '700',
+      marginTop: 3,
+    },
+    sectionHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: 28,
+      marginBottom: 13,
+    },
+    sectionTitle: {
+      color: theme.textPrimary,
+      fontSize: 19,
+      fontWeight: '800',
+    },
+    monthLabel: {
+      color: theme.textSecondary,
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    spendingCard: {
+      borderRadius: 20,
+      padding: 18,
+      backgroundColor: theme.card,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    spendingTopRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    spendingRight: {
+      alignItems: 'flex-end',
+      gap: 8,
+    },
+    spendingAmount: {
+      color: theme.textPrimary,
+      fontSize: 24,
+      fontWeight: '800',
+    },
+    budgetText: {
+      color: theme.textSecondary,
+      fontSize: 13,
+      marginTop: 4,
+    },
+    progressPercentage: {
+      borderRadius: 14,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      backgroundColor: COLORS.PRIMARY_GLOW,
+    },
+    progressPercentageText: {
+      color: theme.textPrimary,
+      fontSize: 13,
+      fontWeight: '800',
+    },
+    editBudgetButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 12,
+      backgroundColor: theme.selectedBg,
+    },
+    editBudgetText: {
+      color: theme.textPrimary,
+      fontSize: 12,
+      fontWeight: '800',
+    },
+    progressTrack: {
+      height: 9,
+      borderRadius: 5,
+      overflow: 'hidden',
+      backgroundColor: theme.border,
+      marginTop: 18,
+    },
+    progressBar: {
+      height: '100%',
+      borderRadius: 5,
+      backgroundColor: COLORS.AIACCENT,
+    },
+    remainingText: {
+      color: COLORS.SUCCESS,
+      fontSize: 13,
+      fontWeight: '600',
+      marginTop: 10,
+    },
+    overBudgetText: {
+      color: '#EF4444',
+    },
+    seeAll: {
+      color: COLORS.PRIMARY,
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    transactionItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: theme.border,
+    },
+    transactionIconContainer: {
+      width: 46,
+      height: 46,
+      borderRadius: 15,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    transactionIcon: {
+      fontSize: 21,
+    },
+    transactionDetails: {
+      flex: 1,
+      marginLeft: 12,
+      marginRight: 8,
+    },
+    transactionTitle: {
+      color: theme.textPrimary,
+      fontSize: 15,
+      fontWeight: '700',
+    },
+    transactionMeta: {
+      color: theme.textSecondary,
+      fontSize: 12,
+      marginTop: 4,
+    },
+    transactionAmount: {
+      fontSize: 14,
+      fontWeight: '800',
+    },
+    footerSpacing: {
+      height: 110,
+    },
+  });
 
 export default HomeScreen;

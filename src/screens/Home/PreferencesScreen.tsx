@@ -20,6 +20,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { updateUserPreferences } from '../../store/userSlice';
 import { COLORS } from '../../constants/colors';
 import { getCurrencySymbol } from '../../utils/helpers';
+import { useTheme } from '../../context/ThemeContext';
 
 type RootStackParamList = {
   Preferences: undefined;
@@ -39,6 +40,7 @@ const showSuccess = (message: string) => {
 const PreferencesScreen = ({ navigation }: Props) => {
   const dispatch = useDispatch<AppDispatch>();
   const user = useSelector((state: RootState) => state.user.user);
+  const { isDarkMode, toggleTheme } = useTheme();
 
   const [currency, setCurrency] = useState<string>(user?.currency ?? 'USD');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -87,6 +89,50 @@ const PreferencesScreen = ({ navigation }: Props) => {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Appearance</Text>
+          <Text style={styles.sectionDescription}>
+            Choose how the app looks. Dark mode automatically adjusts all colors
+            to be easier on the eyes in low-light environments.
+          </Text>
+
+          <View style={styles.fieldGroup}>
+            <TouchableOpacity
+              style={styles.darkModeRow}
+              onPress={toggleTheme}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Toggle dark mode"
+            >
+              <View style={styles.darkModeIcon}>
+                <Icon
+                  name={isDarkMode ? 'moon' : 'sunny'}
+                  size={20}
+                  color={isDarkMode ? COLORS.PRIMARY_LIGHT : COLORS.PRIMARY}
+                />
+              </View>
+              <View style={styles.darkModeTextWrap}>
+                <Text style={styles.darkModeTitle}>
+                  {isDarkMode ? 'Dark Mode' : 'Light Mode'}
+                </Text>
+                <Text style={styles.darkModeDescription}>
+                  {isDarkMode
+                    ? 'Dark colors are currently enabled.'
+                    : 'Light colors are currently enabled.'}
+                </Text>
+              </View>
+              <View style={[styles.switch, isDarkMode && styles.switchActive]}>
+                <View
+                  style={[
+                    styles.switchThumb,
+                    isDarkMode && styles.switchThumbActive,
+                  ]}
+                />
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Currency</Text>
           <Text style={styles.sectionDescription}>
@@ -157,7 +203,7 @@ const PreferencesScreen = ({ navigation }: Props) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: COLORS.light.background,
   },
   content: {
     paddingHorizontal: 20,
@@ -168,12 +214,12 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   sectionTitle: {
-    color: '#0F172A',
+    color: COLORS.light.textPrimary,
     fontSize: 18,
     fontWeight: '800',
   },
   sectionDescription: {
-    color: '#64748B',
+    color: COLORS.light.textSecondary,
     fontSize: 13,
     marginTop: 6,
     marginBottom: 16,
@@ -182,10 +228,64 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   label: {
-    color: '#334155',
+    color: COLORS.light.textPrimary,
     fontSize: 14,
     fontWeight: '700',
     marginBottom: 8,
+  },
+  darkModeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: COLORS.light.card,
+    borderWidth: 1,
+    borderColor: COLORS.light.border,
+  },
+  darkModeIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.PRIMARY_GLOW,
+    marginRight: 12,
+  },
+  darkModeTextWrap: {
+    flex: 1,
+    alignItems: 'flex-start',
+  },
+  darkModeTitle: {
+    color: COLORS.light.textPrimary,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  darkModeDescription: {
+    color: COLORS.light.textSecondary,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  switch: {
+    width: 46,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: COLORS.light.border,
+    padding: 3,
+    marginLeft: 'auto',
+  },
+  switchActive: {
+    backgroundColor: COLORS.PRIMARY,
+  },
+  switchThumb: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: COLORS.light.textSecondary,
+  },
+  switchThumbActive: {
+    backgroundColor: '#FFFFFF',
+    transform: [{ translateX: 20 }],
   },
   previewRow: {
     flexDirection: 'row',
@@ -202,7 +302,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.light.card,
     marginRight: 10,
   },
   previewText: {
@@ -213,6 +313,7 @@ const styles = StyleSheet.create({
   },
   previewHighlight: {
     fontWeight: '800',
+    color: COLORS.PRIMARY_DARK,
   },
   linkRow: {
     flexDirection: 'row',
@@ -220,16 +321,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 14,
     borderRadius: 14,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: COLORS.light.card,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: COLORS.light.border,
   },
   linkIcon: {
     marginRight: 10,
   },
   linkText: {
     flex: 1,
-    color: '#0F172A',
+    color: COLORS.light.textPrimary,
     fontSize: 15,
     fontWeight: '700',
   },

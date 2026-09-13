@@ -1,6 +1,19 @@
-import type { ThemeColors } from './theme';
+export type ThemeMode = 'light' | 'dark';
 
-const lightColors: ThemeColors = {
+export type ThemeColors = {
+  background: string;
+  card: string;
+  textPrimary: string;
+  textSecondary: string;
+  textTertiary: string;
+  border: string;
+  inputBg: string;
+  inputPlaceholder: string;
+  modalOverlay: string;
+  selectedBg: string;
+};
+
+export const lightTheme: ThemeColors = {
   background: '#F8FAFC',
   card: '#FFFFFF',
   textPrimary: '#0F172A',
@@ -13,7 +26,7 @@ const lightColors: ThemeColors = {
   selectedBg: '#EEF2FF',
 };
 
-const darkColors: ThemeColors = {
+export const darkTheme: ThemeColors = {
   background: '#0F172A',
   card: '#1E293B',
   textPrimary: '#F8FAFC',
@@ -25,19 +38,3 @@ const darkColors: ThemeColors = {
   modalOverlay: 'rgba(0, 0, 0, 0.6)',
   selectedBg: '#312E81',
 };
-
-export const COLORS = {
-  PRIMARY: '#6366F1',
-  PRIMARY_DARK: '#4F46E5',
-  PRIMARY_LIGHT: '#A5B4FC',
-  PRIMARY_GLOW: 'rgba(99,102,241,0.18)',
-  SECONDARY: '#64748B',
-  AIACCENT: '#8B5CF6',
-  SUCCESS: '#22C55E',
-
-  light: lightColors,
-  dark: darkColors,
-};
-
-export const getThemeColors = (isDarkMode: boolean): ThemeColors =>
-  isDarkMode ? COLORS.dark : COLORS.light;

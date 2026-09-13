@@ -12,6 +12,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import RBSheet from 'react-native-raw-bottom-sheet';
 import Svg, { Path } from 'react-native-svg';
 // import type { RootStackParamList } from '../navigation/RootStack';
+import { useTheme } from '../context/ThemeContext';
+import { COLORS, getThemeColors } from '../constants/colors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -21,7 +23,6 @@ const NOTCH_DEPTH = 28;
 const NOTCH_WIDTH = 90;
 const CORNER_RADIUS = 24;
 const ACTIVE_COLOR = '#6B4EFF';
-const INACTIVE_COLOR = '#C4C4D4';
 
 type TransactionType = 'expense' | 'income';
 
@@ -126,6 +127,9 @@ export default function CustomTabBar({
   const sheetRef = useRef(null);
   const selectedTypeRef = useRef<TransactionType | null>(null);
 
+  const { isDarkMode } = useTheme();
+  const theme = getThemeColors(isDarkMode);
+
   const tabs = state.routes;
   const leftTabs = tabs.slice(0, 2);
   const rightTabs = tabs.slice(2);
@@ -161,7 +165,8 @@ export default function CustomTabBar({
   const renderTab = (route: (typeof tabs)[0], index: number) => {
     const { options } = descriptors[route.key];
     const isFocused = state.index === index;
-    const color = isFocused ? ACTIVE_COLOR : INACTIVE_COLOR;
+    const inactiveColor = isDarkMode ? '#94A3B8' : '#C4C4D4';
+    const color = isFocused ? ACTIVE_COLOR : inactiveColor;
     const renderIcon = TAB_ICONS[route.name];
 
     const onPress = () => {
@@ -200,9 +205,13 @@ export default function CustomTabBar({
           style={StyleSheet.absoluteFill}
         >
           {/* Shadow path (slightly larger, offset down) */}
-          <Path d={notchPath} fill="rgba(107, 78, 255, 0.06)" translateY={2} />
-          {/* Main white bar */}
-          <Path d={notchPath} fill="#FFFFFF" />
+          <Path
+            d={notchPath}
+            fill={isDarkMode ? 'rgba(0,0,0,0.25)' : 'rgba(107, 78, 255, 0.06)'}
+            translateY={2}
+          />
+          {/* Main bar */}
+          <Path d={notchPath} fill={theme.card} />
         </Svg>
 
         {/* FAB */}
