@@ -198,7 +198,12 @@ export default function CustomTabBar({
 
   return (
     <>
-      <View style={[styles.wrapper, { height: totalHeight }]}>
+      <View
+        style={[
+          styles.wrapper,
+          { height: totalHeight, backgroundColor: theme.background },
+        ]}
+      >
         <Svg
           width={SCREEN_WIDTH}
           height={totalHeight}

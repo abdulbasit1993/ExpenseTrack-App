@@ -13,7 +13,7 @@ import {
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { RootState } from '../../store/store';
 import Icon from '@react-native-vector-icons/ionicons';
 import { COLORS, getThemeColors } from '../../constants/colors';
@@ -91,6 +91,7 @@ const formatTransactionDate = (value: string) =>
   });
 
 const HomeScreen = () => {
+  const navigation = useNavigation();
   const user = useSelector((state: RootState) => state.user.user);
   const { isDarkMode } = useTheme();
   const theme = getThemeColors(isDarkMode);
@@ -207,11 +208,17 @@ const HomeScreen = () => {
             </Text>
           </View>
 
-          <View style={styles.avatar}>
+          <TouchableOpacity
+            onPress={() => {
+              navigation.navigate('Profile');
+            }}
+            activeOpacity={0.8}
+            style={styles.avatar}
+          >
             <Text style={styles.avatarText}>
               {user?.firstName.charAt(0).toUpperCase()}
             </Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.balanceCard}>
@@ -419,12 +426,12 @@ const themeStyles = (theme: ThemeColors) =>
       elevation: 8,
     },
     balanceLabel: {
-      color: theme.textSecondary,
+      color: '#FFFFFF',
       fontSize: 15,
       fontWeight: '500',
     },
     balanceAmount: {
-      color: theme.textPrimary,
+      color: '#FFFFFF',
       fontSize: 34,
       fontWeight: '800',
       marginTop: 5,
@@ -458,17 +465,17 @@ const themeStyles = (theme: ThemeColors) =>
       backgroundColor: 'rgba(255,255,255,0.18)',
     },
     detailIconText: {
-      color: theme.textPrimary,
+      color: '#FFFFFF',
       fontSize: 19,
       fontWeight: '800',
     },
     detailLabel: {
-      color: theme.textPrimary,
+      color: '#FFFFFF',
       fontSize: 12,
       fontWeight: '500',
     },
     detailAmount: {
-      color: theme.textPrimary,
+      color: '#FFFFFF',
       fontSize: 14,
       fontWeight: '700',
       marginTop: 3,
