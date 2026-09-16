@@ -31,6 +31,7 @@ export type TransactionRowProps = {
   transaction: Transaction;
   category?: Category;
   onPress: () => void;
+  customStyles?: any;
 };
 
 export type EditTransactionModalProps = {

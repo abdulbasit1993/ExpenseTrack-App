@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -18,7 +18,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../store/store';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { updateUserPreferences } from '../../store/userSlice';
-import { COLORS } from '../../constants/colors';
+import { COLORS, getThemeColors } from '../../constants/colors';
+import type { ThemeColors } from '../../constants/theme';
 import { getCurrencySymbol } from '../../utils/helpers';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -41,6 +42,8 @@ const PreferencesScreen = ({ navigation }: Props) => {
   const dispatch = useDispatch<AppDispatch>();
   const user = useSelector((state: RootState) => state.user.user);
   const { isDarkMode, toggleTheme } = useTheme();
+  const theme = getThemeColors(isDarkMode);
+  const styles = useMemo(() => makeStyles(theme), [theme]);
 
   const [currency, setCurrency] = useState<string>(user?.currency ?? 'USD');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -151,7 +154,7 @@ const PreferencesScreen = ({ navigation }: Props) => {
                   color={COLORS.PRIMARY}
                 />
               </View>
-              <Text>
+              <Text style={{ color: theme.textSecondary }}>
                 Amounts will be prefixed with{' '}
                 <Text style={styles.previewHighlight}>{currencySymbol}</Text> (
                 {currency}).
@@ -200,143 +203,144 @@ const PreferencesScreen = ({ navigation }: Props) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: COLORS.light.background,
-  },
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 28,
-  },
-  section: {
-    marginBottom: 28,
-  },
-  sectionTitle: {
-    color: COLORS.light.textPrimary,
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  sectionDescription: {
-    color: COLORS.light.textSecondary,
-    fontSize: 13,
-    marginTop: 6,
-    marginBottom: 16,
-  },
-  fieldGroup: {
-    gap: 8,
-  },
-  label: {
-    color: COLORS.light.textPrimary,
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  darkModeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    borderRadius: 14,
-    backgroundColor: COLORS.light.card,
-    borderWidth: 1,
-    borderColor: COLORS.light.border,
-  },
-  darkModeIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.PRIMARY_GLOW,
-    marginRight: 12,
-  },
-  darkModeTextWrap: {
-    flex: 1,
-    alignItems: 'flex-start',
-  },
-  darkModeTitle: {
-    color: COLORS.light.textPrimary,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  darkModeDescription: {
-    color: COLORS.light.textSecondary,
-    fontSize: 12,
-    marginTop: 2,
-  },
-  switch: {
-    width: 46,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: COLORS.light.border,
-    padding: 3,
-    marginLeft: 'auto',
-  },
-  switchActive: {
-    backgroundColor: COLORS.PRIMARY,
-  },
-  switchThumb: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: COLORS.light.textSecondary,
-  },
-  switchThumbActive: {
-    backgroundColor: '#FFFFFF',
-    transform: [{ translateX: 20 }],
-  },
-  previewRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: COLORS.PRIMARY_GLOW,
-  },
-  previewIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.light.card,
-    marginRight: 10,
-  },
-  previewText: {
-    flex: 1,
-    color: COLORS.PRIMARY_DARK,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  previewHighlight: {
-    fontWeight: '800',
-    color: COLORS.PRIMARY_DARK,
-  },
-  linkRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    borderRadius: 14,
-    backgroundColor: COLORS.light.card,
-    borderWidth: 1,
-    borderColor: COLORS.light.border,
-  },
-  linkIcon: {
-    marginRight: 10,
-  },
-  linkText: {
-    flex: 1,
-    color: COLORS.light.textPrimary,
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  buttonContainer: {
-    marginTop: 8,
-  },
-});
+const makeStyles = (theme: ThemeColors) =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    content: {
+      paddingHorizontal: 20,
+      paddingTop: 20,
+      paddingBottom: 28,
+    },
+    section: {
+      marginBottom: 28,
+    },
+    sectionTitle: {
+      color: theme.textPrimary,
+      fontSize: 18,
+      fontWeight: '800',
+    },
+    sectionDescription: {
+      color: theme.textSecondary,
+      fontSize: 13,
+      marginTop: 6,
+      marginBottom: 16,
+    },
+    fieldGroup: {
+      gap: 8,
+    },
+    label: {
+      color: theme.textPrimary,
+      fontSize: 14,
+      fontWeight: '700',
+      marginBottom: 8,
+    },
+    darkModeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 14,
+      paddingVertical: 14,
+      borderRadius: 14,
+      backgroundColor: theme.card,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    darkModeIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: COLORS.PRIMARY_GLOW,
+      marginRight: 12,
+    },
+    darkModeTextWrap: {
+      flex: 1,
+      alignItems: 'flex-start',
+    },
+    darkModeTitle: {
+      color: theme.textPrimary,
+      fontSize: 15,
+      fontWeight: '700',
+    },
+    darkModeDescription: {
+      color: theme.textSecondary,
+      fontSize: 12,
+      marginTop: 2,
+    },
+    switch: {
+      width: 46,
+      height: 26,
+      borderRadius: 13,
+      backgroundColor: theme.border,
+      padding: 3,
+      marginLeft: 'auto',
+    },
+    switchActive: {
+      backgroundColor: COLORS.PRIMARY,
+    },
+    switchThumb: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      backgroundColor: theme.textSecondary,
+    },
+    switchThumbActive: {
+      backgroundColor: '#FFFFFF',
+      transform: [{ translateX: 20 }],
+    },
+    previewRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      borderRadius: 12,
+      backgroundColor: COLORS.PRIMARY_GLOW,
+    },
+    previewIcon: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: theme.card,
+      marginRight: 10,
+    },
+    previewText: {
+      flex: 1,
+      color: COLORS.PRIMARY_DARK,
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    previewHighlight: {
+      fontWeight: '800',
+      color: COLORS.PRIMARY_DARK,
+    },
+    linkRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 14,
+      paddingVertical: 14,
+      borderRadius: 14,
+      backgroundColor: theme.card,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    linkIcon: {
+      marginRight: 10,
+    },
+    linkText: {
+      flex: 1,
+      color: theme.textPrimary,
+      fontSize: 15,
+      fontWeight: '700',
+    },
+    buttonContainer: {
+      marginTop: 8,
+    },
+  });
 
 export default PreferencesScreen;

@@ -1,4 +1,4 @@
-import React, { useRef, JSX } from 'react';
+import React, { useRef, useMemo, JSX } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import Svg, { Path } from 'react-native-svg';
 // import type { RootStackParamList } from '../navigation/RootStack';
 import { useTheme } from '../context/ThemeContext';
 import { COLORS, getThemeColors } from '../constants/colors';
+import type { ThemeColors } from '../constants/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -129,6 +130,7 @@ export default function CustomTabBar({
 
   const { isDarkMode } = useTheme();
   const theme = getThemeColors(isDarkMode);
+  const styles = useMemo(() => makeStyles(theme), [theme]);
 
   const tabs = state.routes;
   const leftTabs = tabs.slice(0, 2);
@@ -318,137 +320,138 @@ export default function CustomTabBar({
   );
 }
 
-const styles = StyleSheet.create({
-  wrapper: {
-    position: 'relative',
-    // IMPORTANT: allow FAB to visually overflow upward
-    overflow: 'visible',
-  },
-  tabRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingTop: NOTCH_DEPTH, // Push tabs down below notch curve
-    // paddingBottom: Platform.OS === 'ios' ? 20 : 8,
-    height: '100%',
-  },
-  tabSection: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-evenly',
-    alignItems: 'center',
-  },
-  tabButton: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 4,
-    gap: 4,
-  },
-  activeDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: ACTIVE_COLOR,
-    marginTop: 2,
-  },
-  fabContainer: {
-    position: 'absolute',
-    top: -FAB_RADIUS, // FAB sits half above the bar top edge
-    alignSelf: 'center',
-    zIndex: 10,
-    shadowColor: '#6B4EFF',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 14,
-    elevation: 14,
-  },
-  fab: {
-    width: FAB_RADIUS * 2,
-    height: FAB_RADIUS * 2,
-    borderRadius: FAB_RADIUS,
-    backgroundColor: '#6B4EFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sheetOverlay: {
-    backgroundColor: 'rgba(15, 23, 42, 0.42)',
-  },
-  sheetContainer: {
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    backgroundColor: '#FFFFFF',
-  },
-  sheetHandle: {
-    width: 42,
-    height: 5,
-    borderRadius: 3,
-    marginTop: 10,
-    backgroundColor: '#CBD5E1',
-  },
-  sheetContent: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 8,
-  },
-  sheetTitle: {
-    color: '#0F172A',
-    fontSize: 22,
-    fontWeight: '800',
-  },
-  sheetSubtitle: {
-    color: '#64748B',
-    fontSize: 15,
-    marginTop: 5,
-    marginBottom: 20,
-  },
-  sheetOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 18,
-    marginBottom: 12,
-  },
-  expenseOption: {
-    backgroundColor: '#F5F3FF',
-  },
-  incomeOption: {
-    backgroundColor: '#ECFDF3',
-  },
-  optionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  expenseIcon: {
-    backgroundColor: '#EDE9FE',
-  },
-  incomeIcon: {
-    backgroundColor: '#DCFCE7',
-  },
-  optionIconText: {
-    color: '#0F172A',
-    fontSize: 24,
-    fontWeight: '800',
-  },
-  optionCopy: {
-    flex: 1,
-    marginLeft: 14,
-  },
-  optionTitle: {
-    color: '#0F172A',
-    fontSize: 17,
-    fontWeight: '800',
-  },
-  optionDescription: {
-    color: '#64748B',
-    fontSize: 13,
-    marginTop: 3,
-  },
-  optionArrow: {
-    color: '#64748B',
-    fontSize: 30,
-    fontWeight: '300',
-  },
-});
+const makeStyles = (theme: ThemeColors) =>
+  StyleSheet.create({
+    wrapper: {
+      position: 'relative',
+      // IMPORTANT: allow FAB to visually overflow upward
+      overflow: 'visible',
+    },
+    tabRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingTop: NOTCH_DEPTH, // Push tabs down below notch curve
+      // paddingBottom: Platform.OS === 'ios' ? 20 : 8,
+      height: '100%',
+    },
+    tabSection: {
+      flex: 1,
+      flexDirection: 'row',
+      justifyContent: 'space-evenly',
+      alignItems: 'center',
+    },
+    tabButton: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 4,
+      gap: 4,
+    },
+    activeDot: {
+      width: 4,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: ACTIVE_COLOR,
+      marginTop: 2,
+    },
+    fabContainer: {
+      position: 'absolute',
+      top: -FAB_RADIUS, // FAB sits half above the bar top edge
+      alignSelf: 'center',
+      zIndex: 10,
+      shadowColor: '#6B4EFF',
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.4,
+      shadowRadius: 14,
+      elevation: 14,
+    },
+    fab: {
+      width: FAB_RADIUS * 2,
+      height: FAB_RADIUS * 2,
+      borderRadius: FAB_RADIUS,
+      backgroundColor: '#6B4EFF',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    sheetOverlay: {
+      backgroundColor: theme.modalOverlay,
+    },
+    sheetContainer: {
+      borderTopLeftRadius: 28,
+      borderTopRightRadius: 28,
+      backgroundColor: theme.card,
+    },
+    sheetHandle: {
+      width: 42,
+      height: 5,
+      borderRadius: 3,
+      marginTop: 10,
+      backgroundColor: theme.border,
+    },
+    sheetContent: {
+      flex: 1,
+      paddingHorizontal: 20,
+      paddingTop: 8,
+    },
+    sheetTitle: {
+      color: theme.textPrimary,
+      fontSize: 22,
+      fontWeight: '800',
+    },
+    sheetSubtitle: {
+      color: theme.textSecondary,
+      fontSize: 15,
+      marginTop: 5,
+      marginBottom: 20,
+    },
+    sheetOption: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: 16,
+      borderRadius: 18,
+      marginBottom: 12,
+    },
+    expenseOption: {
+      backgroundColor: theme.selectedBg,
+    },
+    incomeOption: {
+      backgroundColor: theme.selectedBg,
+    },
+    optionIcon: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    expenseIcon: {
+      backgroundColor: theme.selectedBg,
+    },
+    incomeIcon: {
+      backgroundColor: theme.selectedBg,
+    },
+    optionIconText: {
+      color: theme.textPrimary,
+      fontSize: 24,
+      fontWeight: '800',
+    },
+    optionCopy: {
+      flex: 1,
+      marginLeft: 14,
+    },
+    optionTitle: {
+      color: theme.textPrimary,
+      fontSize: 17,
+      fontWeight: '800',
+    },
+    optionDescription: {
+      color: theme.textSecondary,
+      fontSize: 13,
+      marginTop: 3,
+    },
+    optionArrow: {
+      color: theme.textSecondary,
+      fontSize: 30,
+      fontWeight: '300',
+    },
+  });

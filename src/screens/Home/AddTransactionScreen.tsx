@@ -24,7 +24,9 @@ import { s, vs } from 'react-native-size-matters';
 import type { AppDispatch, RootState } from '../../store/store';
 import { fetchCategories, type Category } from '../../store/categoriesSlice';
 import { api } from '../../services/apiService';
-import { COLORS } from '../../constants/colors';
+import { COLORS, getThemeColors } from '../../constants/colors';
+import type { ThemeColors } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import CustomButton from '../../components/CustomButton';
 import Header from '../../components/Header';
 import { getCurrencySymbol } from '../../utils/helpers';
@@ -64,6 +66,9 @@ const AddTransactionScreen = ({ navigation, route }: Props) => {
   const { categories, status } = useSelector(
     (state: RootState) => state.categories,
   );
+  const { isDarkMode } = useTheme();
+  const theme = getThemeColors(isDarkMode);
+  const styles = useMemo(() => makeStyles(theme), [theme]);
 
   const initialType: TransactionType = route.params?.type ?? 'expense';
 
@@ -484,232 +489,237 @@ const AddTransactionScreen = ({ navigation, route }: Props) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  content: {
-    paddingHorizontal: s(20),
-    paddingTop: vs(20),
-    paddingBottom: vs(12),
-  },
-  segmentContainer: {
-    height: vs(44),
-    marginBottom: vs(8),
-  },
-  segmentTab: {
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
-  },
-  segmentActiveTab: {
-    // backgroundColor: COLORS.PRIMARY,
-  },
-  segmentTabText: {
-    color: '#64748B',
-    fontWeight: '700',
-    fontSize: vs(14),
-  },
-  segmentActiveTabText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-  label: {
-    color: '#334155',
-    fontSize: vs(14),
-    fontWeight: '700',
-    marginBottom: vs(8),
-    marginTop: vs(14),
-  },
-  optional: {
-    color: '#94A3B8',
-    fontWeight: '500',
-  },
-  amountInputContainer: {
-    height: vs(56),
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: s(14),
-    paddingHorizontal: s(16),
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  currencySymbol: {
-    fontSize: vs(26),
-    fontWeight: '800',
-    marginRight: s(8),
-  },
-  amountInput: {
-    flex: 1,
-    fontSize: vs(26),
-    fontWeight: '700',
-    padding: 0,
-  },
-  input: {
-    minHeight: vs(48),
-    borderRadius: s(14),
-    paddingHorizontal: s(16),
-    color: '#0F172A',
-    fontSize: vs(15),
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  descriptionInput: {
-    minHeight: vs(88),
-    paddingTop: vs(12),
-  },
-  selectInput: {
-    height: vs(48),
-    flex: 7,
-    flexBasis: 0,
-    minWidth: 0,
-    borderRadius: s(14),
-    paddingHorizontal: s(12),
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  categoryContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  dateIcon: {
-    marginRight: s(10),
-  },
-  selectText: {
-    color: '#0F172A',
-    fontSize: vs(15),
-  },
-  placeholderText: {
-    color: '#94A3B8',
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(15, 23, 42, 0.42)',
-  },
-  categorySheet: {
-    maxHeight: '70%',
-    borderTopLeftRadius: s(26),
-    borderTopRightRadius: s(26),
-    padding: s(20),
-    paddingBottom: vs(34),
-    backgroundColor: '#FFFFFF',
-  },
-  sheetHandle: {
-    width: s(42),
-    height: vs(5),
-    borderRadius: s(3),
-    alignSelf: 'center',
-    backgroundColor: '#CBD5E1',
-    marginBottom: vs(20),
-  },
-  sheetTitle: {
-    color: '#0F172A',
-    fontSize: vs(20),
-    fontWeight: '800',
-    marginBottom: vs(14),
-  },
-  categoryOption: {
-    minHeight: vs(50),
-    paddingHorizontal: s(14),
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: s(14),
-    marginTop: vs(6),
-  },
-  selectedCategoryOption: {
-    backgroundColor: '#EEF2FF',
-  },
-  categoryColor: {
-    width: s(12),
-    height: vs(12),
-    borderRadius: s(6),
-    marginRight: s(12),
-  },
-  categoryName: {
-    flex: 1,
-    color: '#334155',
-    fontSize: vs(16),
-    fontWeight: '600',
-  },
-  emptyText: {
-    color: '#64748B',
-    fontSize: vs(15),
-    textAlign: 'center',
-    paddingVertical: vs(28),
-  },
-  categoryRow: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: s(6),
-  },
-  aiSuggestButton: {
-    height: vs(42),
-    flex: 3,
-    flexBasis: 0,
-    minWidth: 0,
-    borderRadius: s(12),
-    backgroundColor: COLORS.PRIMARY,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: s(5),
-    gap: s(4),
-  },
-  aiSuggestButtonLoading: { opacity: 0.7 },
-  aiSuggestionBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: vs(8),
-    padding: vs(10),
-    backgroundColor: '#EEF2FF',
-    borderRadius: s(12),
-    borderWidth: 1,
-    borderColor: '#C7D2FE',
-  },
-  aiSuggestionContent: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: s(6),
-  },
-  aiSuggestionText: { color: '#3730A3', fontSize: vs(13), fontWeight: '500' },
-  aiSuggestionCategory: { fontWeight: '700', color: '#312E81' },
-  aiSuggestionApplyButton: {
-    paddingHorizontal: s(12),
-    paddingVertical: vs(6),
-    backgroundColor: COLORS.PRIMARY,
-    borderRadius: s(8),
-  },
-  aiSuggestionApplyText: {
-    color: '#FFFFFF',
-    fontSize: vs(13),
-    fontWeight: '700',
-  },
-  aiSuggestionButtonText: {
-    color: '#FFFFFF',
-    fontSize: vs(10),
-    fontWeight: '700',
-    flexShrink: 1,
-  },
-  fixedButtonContainer: {
-    paddingHorizontal: s(20),
-    paddingVertical: vs(12),
-    backgroundColor: '#F8FAFC',
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-  },
-});
+const makeStyles = (theme: ThemeColors) =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    keyboardView: {
+      flex: 1,
+    },
+    content: {
+      paddingHorizontal: s(20),
+      paddingTop: vs(20),
+      paddingBottom: vs(12),
+    },
+    segmentContainer: {
+      height: vs(44),
+      marginBottom: vs(8),
+    },
+    segmentTab: {
+      borderColor: theme.border,
+      backgroundColor: theme.card,
+    },
+    segmentActiveTab: {
+      // backgroundColor: COLORS.PRIMARY,
+    },
+    segmentTabText: {
+      color: theme.textSecondary,
+      fontWeight: '700',
+      fontSize: vs(14),
+    },
+    segmentActiveTabText: {
+      color: '#FFFFFF',
+      fontWeight: '700',
+    },
+    label: {
+      color: theme.textPrimary,
+      fontSize: vs(14),
+      fontWeight: '700',
+      marginBottom: vs(8),
+      marginTop: vs(14),
+    },
+    optional: {
+      color: theme.textTertiary,
+      fontWeight: '500',
+    },
+    amountInputContainer: {
+      height: vs(56),
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderRadius: s(14),
+      paddingHorizontal: s(16),
+      backgroundColor: theme.inputBg,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    currencySymbol: {
+      fontSize: vs(26),
+      fontWeight: '800',
+      marginRight: s(8),
+    },
+    amountInput: {
+      flex: 1,
+      fontSize: vs(26),
+      fontWeight: '700',
+      padding: 0,
+    },
+    input: {
+      minHeight: vs(48),
+      borderRadius: s(14),
+      paddingHorizontal: s(16),
+      color: theme.textPrimary,
+      fontSize: vs(15),
+      backgroundColor: theme.inputBg,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    descriptionInput: {
+      minHeight: vs(88),
+      paddingTop: vs(12),
+    },
+    selectInput: {
+      height: vs(48),
+      flex: 7,
+      flexBasis: 0,
+      minWidth: 0,
+      borderRadius: s(14),
+      paddingHorizontal: s(12),
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: theme.inputBg,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    categoryContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    dateIcon: {
+      marginRight: s(10),
+    },
+    selectText: {
+      color: theme.textPrimary,
+      fontSize: vs(15),
+    },
+    placeholderText: {
+      color: theme.textTertiary,
+    },
+    modalOverlay: {
+      flex: 1,
+      justifyContent: 'flex-end',
+      backgroundColor: theme.modalOverlay,
+    },
+    categorySheet: {
+      maxHeight: '70%',
+      borderTopLeftRadius: s(26),
+      borderTopRightRadius: s(26),
+      padding: s(20),
+      paddingBottom: vs(34),
+      backgroundColor: theme.card,
+    },
+    sheetHandle: {
+      width: s(42),
+      height: vs(5),
+      borderRadius: s(3),
+      alignSelf: 'center',
+      backgroundColor: theme.border,
+      marginBottom: vs(20),
+    },
+    sheetTitle: {
+      color: theme.textPrimary,
+      fontSize: vs(20),
+      fontWeight: '800',
+      marginBottom: vs(14),
+    },
+    categoryOption: {
+      minHeight: vs(50),
+      paddingHorizontal: s(14),
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderRadius: s(14),
+      marginTop: vs(6),
+    },
+    selectedCategoryOption: {
+      backgroundColor: theme.selectedBg,
+    },
+    categoryColor: {
+      width: s(12),
+      height: vs(12),
+      borderRadius: s(6),
+      marginRight: s(12),
+    },
+    categoryName: {
+      flex: 1,
+      color: theme.textPrimary,
+      fontSize: vs(16),
+      fontWeight: '600',
+    },
+    emptyText: {
+      color: theme.textSecondary,
+      fontSize: vs(15),
+      textAlign: 'center',
+      paddingVertical: vs(28),
+    },
+    categoryRow: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: s(6),
+    },
+    aiSuggestButton: {
+      height: vs(42),
+      flex: 3,
+      flexBasis: 0,
+      minWidth: 0,
+      borderRadius: s(12),
+      backgroundColor: COLORS.PRIMARY,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: s(5),
+      gap: s(4),
+    },
+    aiSuggestButtonLoading: { opacity: 0.7 },
+    aiSuggestionBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: vs(8),
+      padding: vs(10),
+      backgroundColor: theme.selectedBg,
+      borderRadius: s(12),
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    aiSuggestionContent: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: s(6),
+    },
+    aiSuggestionText: {
+      color: theme.textPrimary,
+      fontSize: vs(13),
+      fontWeight: '500',
+    },
+    aiSuggestionCategory: { fontWeight: '700', color: theme.textPrimary },
+    aiSuggestionApplyButton: {
+      paddingHorizontal: s(12),
+      paddingVertical: vs(6),
+      backgroundColor: COLORS.PRIMARY,
+      borderRadius: s(8),
+    },
+    aiSuggestionApplyText: {
+      color: '#FFFFFF',
+      fontSize: vs(13),
+      fontWeight: '700',
+    },
+    aiSuggestionButtonText: {
+      color: '#FFFFFF',
+      fontSize: vs(10),
+      fontWeight: '700',
+      flexShrink: 1,
+    },
+    fixedButtonContainer: {
+      paddingHorizontal: s(20),
+      paddingVertical: vs(12),
+      backgroundColor: theme.background,
+      borderTopWidth: 1,
+      borderTopColor: theme.border,
+    },
+  });
 
 export default AddTransactionScreen;

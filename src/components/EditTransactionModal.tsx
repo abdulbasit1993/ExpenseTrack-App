@@ -19,7 +19,9 @@ import {
 import { useSelector } from 'react-redux';
 import type { RootState } from '../store/store';
 import { Category } from '../store/categoriesSlice';
-import { COLORS } from '../constants/colors';
+import { COLORS, getThemeColors } from '../constants/colors';
+import type { ThemeColors } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from './Header';
 import SegmentedControlTab from 'react-native-segmented-control-tab';
@@ -51,6 +53,10 @@ const EditTransactionModal = ({
   handleDelete,
   handleSave,
 }: EditTransactionModalProps) => {
+  const { isDarkMode } = useTheme();
+  const theme = getThemeColors(isDarkMode);
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+
   const user = useSelector((state: RootState) => state.user.user);
   const currencySymbol = getCurrencySymbol(user?.currency);
   const [title, setTitle] = useState('');
@@ -196,7 +202,7 @@ const EditTransactionModal = ({
                 value={amount}
                 onChangeText={setAmount}
                 placeholder="0.00"
-                placeholderTextColor={'#94A3B8'}
+                placeholderTextColor={theme.inputPlaceholder}
                 keyboardType="decimal-pad"
                 style={[styles.amountInput, { color: accentColor }]}
               />
@@ -207,7 +213,7 @@ const EditTransactionModal = ({
               value={title}
               onChangeText={setTitle}
               placeholder="e.g. Groceries"
-              placeholderTextColor={'#94A3B8'}
+              placeholderTextColor={theme.inputPlaceholder}
               style={styles.input}
               maxLength={80}
             />
@@ -240,7 +246,7 @@ const EditTransactionModal = ({
                     {selectedCategory?.name ?? 'Select a category'}
                   </Text>
                 </View>
-                <Icon name="chevron-down" size={18} color="#64748B" />
+                <Icon name="chevron-down" size={18} color={theme.textTertiary} />
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -309,7 +315,7 @@ const EditTransactionModal = ({
               value={description}
               onChangeText={setDescription}
               placeholder="Add a note about this transaction"
-              placeholderTextColor={'#94A3B8'}
+              placeholderTextColor={theme.inputPlaceholder}
               style={[styles.input, styles.descriptionInput]}
               multiline
               textAlignVertical="top"
@@ -432,222 +438,223 @@ const EditTransactionModal = ({
   );
 };
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 28,
-  },
-  segmentContainer: {
-    height: 46,
-    marginBottom: 8,
-  },
-  segmentTab: {
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
-  },
-  segmentActiveTab: {},
-  segmentTabText: {
-    color: '#64748B',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  segmentActiveTabText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-  label: {
-    color: '#334155',
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 8,
-    marginTop: 18,
-  },
-  optional: {
-    color: '#94A3B8',
-    fontWeight: '500',
-  },
-  amountInputContainer: {
-    height: 78,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 16,
-    paddingHorizontal: 18,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  currencySymbol: {
-    fontSize: 30,
-    fontWeight: '800',
-    marginRight: 8,
-  },
-  amountInput: {
-    flex: 1,
-    fontSize: 30,
-    fontWeight: '700',
-    padding: 0,
-  },
-  input: {
-    minHeight: 54,
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    color: '#0F172A',
-    fontSize: 15,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  descriptionInput: {
-    minHeight: 110,
-    paddingTop: 15,
-  },
-  selectInput: {
-    height: 54,
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  categoryContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  categoryColor: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 12,
-  },
-  dateIcon: {
-    marginRight: 10,
-  },
-  selectText: {
-    color: '#0F172A',
-    fontSize: 15,
-  },
-  placeholderText: {
-    color: '#94A3B8',
-  },
-  buttonContainer: {
-    marginTop: 32,
-  },
-  deleteLink: {
-    marginTop: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-  },
-  deleteLinkText: {
-    color: EXPENSE_COLOR,
-    fontSize: 14,
-    fontWeight: '700',
-    marginLeft: 6,
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(15, 23, 42, 0.42)',
-  },
-  categorySheet: {
-    maxHeight: '70%',
-    borderTopLeftRadius: 26,
-    borderTopRightRadius: 26,
-    padding: 20,
-    paddingBottom: 34,
-    backgroundColor: '#FFFFFF',
-  },
-  sheetHandle: {
-    width: 42,
-    height: 5,
-    borderRadius: 3,
-    alignSelf: 'center',
-    backgroundColor: '#CBD5E1',
-    marginBottom: 20,
-  },
-  sheetTitle: {
-    color: '#0F172A',
-    fontSize: 20,
-    fontWeight: '800',
-    marginBottom: 14,
-  },
-  categoryOption: {
-    minHeight: 56,
-    paddingHorizontal: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 14,
-    marginTop: 6,
-  },
-  categoryName: {
-    flex: 1,
-    color: '#334155',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  emptyText: {
-    color: '#64748B',
-    fontSize: 15,
-    textAlign: 'center',
-    paddingVertical: 28,
-  },
-  selectedCategoryOption: {
-    backgroundColor: '#EEF2FF',
-  },
-  categoryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  aiSuggestButton: {
-    height: 54,
-    width: 54,
-    borderRadius: 14,
-    backgroundColor: COLORS.PRIMARY,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  aiSuggestButtonLoading: { opacity: 0.7 },
-  aiSuggestionBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 8,
-    padding: 12,
-    backgroundColor: '#EEF2FF',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#C7D2FE',
-  },
-  aiSuggestionContent: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  aiSuggestionText: { color: '#3730A3', fontSize: 13, fontWeight: '500' },
-  aiSuggestionCategory: { fontWeight: '700', color: '#312E81' },
-  aiSuggestionConfidence: { color: '#6366F1', fontSize: 12 },
-  aiSuggestionApplyButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: COLORS.PRIMARY,
-    borderRadius: 8,
-  },
-  aiSuggestionApplyText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
-});
+const makeStyles = (theme: ThemeColors) =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    keyboardView: {
+      flex: 1,
+    },
+    content: {
+      paddingHorizontal: 20,
+      paddingTop: 20,
+      paddingBottom: 28,
+    },
+    segmentContainer: {
+      height: 46,
+      marginBottom: 8,
+    },
+    segmentTab: {
+      borderColor: theme.border,
+      backgroundColor: theme.card,
+    },
+    segmentActiveTab: {},
+    segmentTabText: {
+      color: theme.textSecondary,
+      fontWeight: '700',
+      fontSize: 14,
+    },
+    segmentActiveTabText: {
+      color: '#FFFFFF',
+      fontWeight: '700',
+    },
+    label: {
+      color: theme.textPrimary,
+      fontSize: 14,
+      fontWeight: '700',
+      marginBottom: 8,
+      marginTop: 18,
+    },
+    optional: {
+      color: theme.textTertiary,
+      fontWeight: '500',
+    },
+    amountInputContainer: {
+      height: 78,
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderRadius: 16,
+      paddingHorizontal: 18,
+      backgroundColor: theme.card,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    currencySymbol: {
+      fontSize: 30,
+      fontWeight: '800',
+      marginRight: 8,
+    },
+    amountInput: {
+      flex: 1,
+      fontSize: 30,
+      fontWeight: '700',
+      padding: 0,
+    },
+    input: {
+      minHeight: 54,
+      borderRadius: 14,
+      paddingHorizontal: 16,
+      color: theme.textPrimary,
+      fontSize: 15,
+      backgroundColor: theme.card,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    descriptionInput: {
+      minHeight: 110,
+      paddingTop: 15,
+    },
+    selectInput: {
+      height: 54,
+      borderRadius: 14,
+      paddingHorizontal: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: theme.card,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    categoryContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    categoryColor: {
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+      marginRight: 12,
+    },
+    dateIcon: {
+      marginRight: 10,
+    },
+    selectText: {
+      color: theme.textPrimary,
+      fontSize: 15,
+    },
+    placeholderText: {
+      color: theme.textTertiary,
+    },
+    buttonContainer: {
+      marginTop: 32,
+    },
+    deleteLink: {
+      marginTop: 18,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingVertical: 10,
+    },
+    deleteLinkText: {
+      color: EXPENSE_COLOR,
+      fontSize: 14,
+      fontWeight: '700',
+      marginLeft: 6,
+    },
+    modalOverlay: {
+      flex: 1,
+      justifyContent: 'flex-end',
+      backgroundColor: theme.modalOverlay,
+    },
+    categorySheet: {
+      maxHeight: '70%',
+      borderTopLeftRadius: 26,
+      borderTopRightRadius: 26,
+      padding: 20,
+      paddingBottom: 34,
+      backgroundColor: theme.card,
+    },
+    sheetHandle: {
+      width: 42,
+      height: 5,
+      borderRadius: 3,
+      alignSelf: 'center',
+      backgroundColor: theme.border,
+      marginBottom: 20,
+    },
+    sheetTitle: {
+      color: theme.textPrimary,
+      fontSize: 20,
+      fontWeight: '800',
+      marginBottom: 14,
+    },
+    categoryOption: {
+      minHeight: 56,
+      paddingHorizontal: 14,
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderRadius: 14,
+      marginTop: 6,
+    },
+    categoryName: {
+      flex: 1,
+      color: theme.textPrimary,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    emptyText: {
+      color: theme.textSecondary,
+      fontSize: 15,
+      textAlign: 'center',
+      paddingVertical: 28,
+    },
+    selectedCategoryOption: {
+      backgroundColor: theme.selectedBg,
+    },
+    categoryRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    aiSuggestButton: {
+      height: 54,
+      width: 54,
+      borderRadius: 14,
+      backgroundColor: COLORS.PRIMARY,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    aiSuggestButtonLoading: { opacity: 0.7 },
+    aiSuggestionBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: 8,
+      padding: 12,
+      backgroundColor: theme.selectedBg,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    aiSuggestionContent: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    aiSuggestionText: { color: theme.textPrimary, fontSize: 13, fontWeight: '500' },
+    aiSuggestionCategory: { fontWeight: '700', color: theme.textPrimary },
+    aiSuggestionConfidence: { color: COLORS.PRIMARY, fontSize: 12 },
+    aiSuggestionApplyButton: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      backgroundColor: COLORS.PRIMARY,
+      borderRadius: 8,
+    },
+    aiSuggestionApplyText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+  });
 
 export default EditTransactionModal;

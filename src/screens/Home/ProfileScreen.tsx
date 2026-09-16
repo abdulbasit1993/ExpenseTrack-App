@@ -19,7 +19,8 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/RootStack';
 import { useDispatch, useSelector } from 'react-redux';
 import Header from '../../components/Header';
-import { COLORS } from '../../constants/colors';
+import { COLORS, getThemeColors } from '../../constants/colors';
+import type { ThemeColors } from '../../constants/theme';
 import { AppDispatch, RootState } from '../../store/store';
 import {
   fetchCurrentUser,
@@ -31,6 +32,7 @@ import {
   launchCamera,
   Asset,
 } from 'react-native-image-picker';
+import { useTheme } from '../../context/ThemeContext';
 
 type ProfileScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -52,9 +54,249 @@ type FormState = {
 
 const isValidName = (value: string) => value.trim().length >= 1;
 
+const makeStyles = (theme: ThemeColors) =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    flex: {
+      flex: 1,
+    },
+    loadingWrap: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    content: {
+      paddingHorizontal: 20,
+      paddingTop: 20,
+      paddingBottom: 32,
+    },
+    errorBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: theme.card,
+      borderColor: theme.border,
+      borderWidth: 1,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderRadius: 12,
+      marginBottom: 16,
+    },
+    errorBannerText: {
+      color: theme.textPrimary,
+      fontSize: 13,
+      fontWeight: '600',
+      flex: 1,
+    },
+    section: {
+      marginBottom: 28,
+    },
+    sectionTitle: {
+      color: theme.textPrimary,
+      fontSize: 18,
+      fontWeight: '800',
+      marginBottom: 16,
+    },
+    avatarCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.card,
+      borderWidth: 1,
+      borderColor: theme.border,
+      borderRadius: 16,
+      padding: 16,
+      marginBottom: 16,
+    },
+    avatarTap: {
+      position: 'relative',
+    },
+    avatarImage: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+    },
+    avatarFallback: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      backgroundColor: COLORS.PRIMARY_GLOW,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: COLORS.PRIMARY_LIGHT,
+    },
+    avatarInitials: {
+      color: COLORS.PRIMARY_DARK,
+      fontSize: 22,
+      fontWeight: '800',
+    },
+    avatarBadge: {
+      position: 'absolute',
+      bottom: -2,
+      right: -2,
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      backgroundColor: COLORS.PRIMARY,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 2,
+      borderColor: theme.card,
+    },
+    avatarMeta: {
+      flex: 1,
+      marginLeft: 14,
+    },
+    avatarName: {
+      color: theme.textPrimary,
+      fontSize: 16,
+      fontWeight: '800',
+    },
+    avatarEmail: {
+      color: theme.textSecondary,
+      fontSize: 13,
+      marginTop: 2,
+    },
+    avatarHint: {
+      color: COLORS.PRIMARY,
+      fontSize: 12,
+      fontWeight: '600',
+      marginTop: 6,
+    },
+    fieldCard: {
+      marginBottom: 14,
+    },
+    fieldLabel: {
+      color: theme.textPrimary,
+      fontSize: 13,
+      fontWeight: '700',
+      marginBottom: 6,
+      marginLeft: 4,
+    },
+    inputRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.inputBg,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: theme.border,
+      paddingHorizontal: 12,
+    },
+    inputRowError: {
+      borderColor: '#F87171',
+      backgroundColor: theme.card,
+    },
+    inputIcon: {
+      marginRight: 8,
+    },
+    input: {
+      flex: 1,
+      color: theme.textPrimary,
+      fontSize: 15,
+      paddingVertical: 12,
+    },
+    inputReadonly: {
+      backgroundColor: theme.border,
+    },
+    fieldHint: {
+      color: theme.textSecondary,
+      fontSize: 12,
+      marginTop: 4,
+      marginLeft: 4,
+    },
+    errorText: {
+      color: '#B91C1C',
+      fontSize: 12,
+      fontWeight: '600',
+      marginTop: 6,
+      marginLeft: 4,
+    },
+    inlineError: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginTop: 4,
+      marginBottom: 4,
+    },
+    inlineErrorText: {
+      color: '#B91C1C',
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    actionsRow: {
+      flexDirection: 'row',
+      gap: 12,
+      marginTop: 8,
+    },
+    primaryButton: {
+      flex: 1,
+      backgroundColor: COLORS.PRIMARY,
+      paddingVertical: 14,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: COLORS.PRIMARY_DARK,
+      shadowOpacity: 0.25,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 3,
+    },
+    primaryButtonText: {
+      color: '#FFFFFF',
+      fontSize: 15,
+      fontWeight: '800',
+    },
+    secondaryButton: {
+      flex: 1,
+      backgroundColor: theme.card,
+      paddingVertical: 14,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    secondaryButtonText: {
+      color: theme.textPrimary,
+      fontSize: 15,
+      fontWeight: '700',
+    },
+    buttonDisabled: {
+      opacity: 0.5,
+    },
+    optionRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 14,
+      paddingVertical: 14,
+      borderRadius: 14,
+      backgroundColor: theme.card,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    optionTitle: {
+      flex: 1,
+      color: theme.textPrimary,
+      fontSize: 15,
+      fontWeight: '700',
+    },
+  });
+
 const ProfileScreen = () => {
   const navigation = useNavigation<ProfileScreenNavigationProp>();
   const dispatch = useDispatch<AppDispatch>();
+  const { isDarkMode } = useTheme();
+  const theme = getThemeColors(isDarkMode);
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+
+  // Theme-aware error colors — red stays red, just adapted for each mode
+  const errorIconColor = isDarkMode ? '#FCA5A5' : '#B91C1C';
+  const errorBannerBg = isDarkMode ? 'rgba(185,28,28,0.15)' : '#FEF2F2';
+  const errorBannerBorder = isDarkMode ? '#7F1D1D' : '#FECACA';
 
   const user = useSelector(
     (state: RootState) => state.user.user,
@@ -309,8 +551,8 @@ const ProfileScreen = () => {
           showsVerticalScrollIndicator={false}
         >
           {fetchError ? (
-            <View style={styles.errorBanner}>
-              <Icon name="alert-circle" size={18} color="#B91C1C" />
+            <View style={[styles.errorBanner, { backgroundColor: errorBannerBg, borderColor: errorBannerBorder }]}>
+              <Icon name="alert-circle" size={18} color={errorIconColor} />
               <Text style={styles.errorBannerText}>{fetchError}</Text>
             </View>
           ) : null}
@@ -371,7 +613,7 @@ const ProfileScreen = () => {
                   value={form.firstName}
                   onChangeText={text => handleChange('firstName', text)}
                   placeholder="Enter first name"
-                  placeholderTextColor={'#94A3B8'}
+                  placeholderTextColor={theme.inputPlaceholder}
                   style={styles.input}
                   autoCapitalize="words"
                   autoCorrect={false}
@@ -402,7 +644,7 @@ const ProfileScreen = () => {
                   value={form.lastName}
                   onChangeText={text => handleChange('lastName', text)}
                   placeholder="Enter last name"
-                  placeholderTextColor={'#94A3B8'}
+                  placeholderTextColor={theme.inputPlaceholder}
                   style={styles.input}
                   autoCapitalize="words"
                   autoCorrect={false}
@@ -423,7 +665,7 @@ const ProfileScreen = () => {
                 <TextInput
                   value={form.email}
                   placeholder="No email on file"
-                  placeholderTextColor={'#94A3B8'}
+                  placeholderTextColor={theme.inputPlaceholder}
                   style={[styles.input, styles.inputReadonly]}
                   autoCapitalize="none"
                   autoCorrect={false}
@@ -439,7 +681,7 @@ const ProfileScreen = () => {
 
             {profileError ? (
               <View style={styles.inlineError}>
-                <Icon name="alert-circle-outline" size={16} color="#B91C1C" />
+                <Icon name="alert-circle-outline" size={16} color={errorIconColor} />
                 <Text style={styles.inlineErrorText}>{profileError}</Text>
               </View>
             ) : null}
@@ -498,236 +740,5 @@ const ProfileScreen = () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  flex: {
-    flex: 1,
-  },
-  loadingWrap: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 32,
-  },
-  errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FECACA',
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 12,
-    marginBottom: 16,
-  },
-  errorBannerText: {
-    color: '#B91C1C',
-    fontSize: 13,
-    fontWeight: '600',
-    flex: 1,
-  },
-  section: {
-    marginBottom: 28,
-  },
-  sectionTitle: {
-    color: '#0F172A',
-    fontSize: 18,
-    fontWeight: '800',
-    marginBottom: 16,
-  },
-  avatarCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-  },
-  avatarTap: {
-    position: 'relative',
-  },
-  avatarImage: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-  },
-  avatarFallback: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: COLORS.PRIMARY_GLOW,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.PRIMARY_LIGHT,
-  },
-  avatarInitials: {
-    color: COLORS.PRIMARY_DARK,
-    fontSize: 22,
-    fontWeight: '800',
-  },
-  avatarBadge: {
-    position: 'absolute',
-    bottom: -2,
-    right: -2,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: COLORS.PRIMARY,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
-  avatarMeta: {
-    flex: 1,
-    marginLeft: 14,
-  },
-  avatarName: {
-    color: '#0F172A',
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  avatarEmail: {
-    color: COLORS.SECONDARY,
-    fontSize: 13,
-    marginTop: 2,
-  },
-  avatarHint: {
-    color: COLORS.PRIMARY,
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 6,
-  },
-  fieldCard: {
-    marginBottom: 14,
-  },
-  fieldLabel: {
-    color: '#0F172A',
-    fontSize: 13,
-    fontWeight: '700',
-    marginBottom: 6,
-    marginLeft: 4,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    paddingHorizontal: 12,
-  },
-  inputRowError: {
-    borderColor: '#F87171',
-    backgroundColor: '#FEF2F2',
-  },
-  inputIcon: {
-    marginRight: 8,
-  },
-  input: {
-    flex: 1,
-    color: '#0F172A',
-    fontSize: 15,
-    paddingVertical: 12,
-  },
-  inputReadonly: {
-    backgroundColor: '#F1F5F9',
-  },
-  fieldHint: {
-    color: '#64748B',
-    fontSize: 12,
-    marginTop: 4,
-    marginLeft: 4,
-  },
-  errorText: {
-    color: '#B91C1C',
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 6,
-    marginLeft: 4,
-  },
-  inlineError: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 4,
-    marginBottom: 4,
-  },
-  inlineErrorText: {
-    color: '#B91C1C',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  actionsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
-  },
-  primaryButton: {
-    flex: 1,
-    backgroundColor: COLORS.PRIMARY,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: COLORS.PRIMARY_DARK,
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
-  },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  secondaryButton: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  secondaryButtonText: {
-    color: '#0F172A',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  buttonDisabled: {
-    opacity: 0.5,
-  },
-  optionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    borderRadius: 14,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  optionTitle: {
-    flex: 1,
-    color: '#0F172A',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-});
 
 export default ProfileScreen;

@@ -25,7 +25,9 @@ import Icon from '@react-native-vector-icons/ionicons';
 import type { AppDispatch, RootState } from '../../store/store';
 import { fetchCategories, type Category } from '../../store/categoriesSlice';
 import { api } from '../../services/apiService';
-import { COLORS } from '../../constants/colors';
+import { COLORS, getThemeColors } from '../../constants/colors';
+import type { ThemeColors } from '../../constants/theme';
+import { useTheme } from '../../context/ThemeContext';
 import CustomButton from '../../components/CustomButton';
 import Header from '../../components/Header';
 import EditTransactionModal from '../../components/EditTransactionModal';
@@ -68,6 +70,7 @@ const TransactionRow = ({
   transaction,
   category,
   onPress,
+  customStyles,
 }: TransactionRowProps) => {
   const user = useSelector((state: RootState) => state.user.user);
   const currencySymbol = getCurrencySymbol(user?.currency);
@@ -75,32 +78,36 @@ const TransactionRow = ({
   const amountColor = isExpense ? EXPENSE_COLOR : COLORS.SUCCESS;
 
   return (
-    <TouchableOpacity style={styles.row} onPress={onPress} activeOpacity={0.75}>
+    <TouchableOpacity
+      style={customStyles.row}
+      onPress={onPress}
+      activeOpacity={0.75}
+    >
       <View
         style={[
-          styles.rowIconWrap,
+          customStyles.rowIconWrap,
           { backgroundColor: `${category?.color} || COLORS.PRIMARY}1F` },
         ]}
       >
         <View
           style={[
-            styles.rowIconDot,
+            customStyles.rowIconDot,
             { backgroundColor: category?.color || COLORS.PRIMARY },
           ]}
         />
       </View>
 
-      <View style={styles.rowBody}>
-        <Text style={styles.rowTitle} numberOfLines={1}>
+      <View style={customStyles.rowBody}>
+        <Text style={customStyles.rowTitle} numberOfLines={1}>
           {transaction.title}
         </Text>
-        <Text style={styles.rowSubtitle} numberOfLines={1}>
+        <Text style={customStyles.rowSubtitle} numberOfLines={1}>
           {category?.name ?? 'Uncategorized'} ·
           {formatListDate(transaction.date)}
         </Text>
       </View>
 
-      <Text style={[styles.rowAmount, { color: amountColor }]}>
+      <Text style={[customStyles.rowAmount, { color: amountColor }]}>
         {isExpense ? '-' : '+'}
         {formatCurrency(transaction.amount, currencySymbol)}
       </Text>
@@ -109,7 +116,7 @@ const TransactionRow = ({
         name="chevron-forward"
         size={16}
         color="#CBD5E1"
-        style={styles.rowChevron}
+        style={customStyles.rowChevron}
       />
     </TouchableOpacity>
   );
@@ -120,6 +127,9 @@ const TransactionsScreen = ({ navigation }: Props) => {
   const { categories, status: categoriesStatus } = useSelector(
     (state: RootState) => state.categories,
   );
+  const { isDarkMode } = useTheme();
+  const theme = getThemeColors(isDarkMode);
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -347,6 +357,7 @@ const TransactionsScreen = ({ navigation }: Props) => {
               transaction={item}
               category={categoryMap.get(item.categoryId)}
               onPress={() => setEditingTransaction(item)}
+              customStyles={styles}
             />
           )}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
@@ -399,139 +410,144 @@ const TransactionsScreen = ({ navigation }: Props) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  centered: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 28,
-  },
-  filterWrap: {
-    paddingHorizontal: 20,
-    marginBottom: 16,
-  },
-  segmentContainer: {
-    height: 46,
-    marginBottom: 8,
-  },
-  segmentTab: {
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
-  },
-  segmentActiveTab: {},
-  segmentTabText: {
-    color: '#64748B',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  segmentActiveTabText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 28,
-  },
-  listEmptyContent: {
-    flexGrow: 1,
-    paddingHorizontal: 20,
-  },
-  separator: {
-    height: 10,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 68,
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  rowIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  rowIconDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-  },
-  rowBody: {
-    flex: 1,
-    marginRight: 8,
-  },
-  rowTitle: {
-    color: '#0F172A',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  rowSubtitle: {
-    color: '#64748B',
-    fontSize: 12,
-    marginTop: 2,
-  },
-  rowAmount: {
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  rowChevron: {
-    marginLeft: 6,
-  },
-  footerLoading: {
-    paddingVertical: 20,
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 60,
-  },
-  emptyStateTitle: {
-    color: '#334155',
-    fontSize: 16,
-    fontWeight: '700',
-    marginTop: 14,
-  },
-  emptyStateSubtitle: {
-    color: '#94A3B8',
-    fontSize: 13,
-    marginTop: 4,
-    textAlign: 'center',
-  },
-  emptyStateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 20,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: 14,
-    backgroundColor: COLORS.PRIMARY,
-    gap: 6,
-  },
-  emptyStateButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
-    marginLeft: 4,
-  },
-});
+const makeStyles = (theme: ThemeColors) =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    keyboardView: {
+      flex: 1,
+    },
+    centered: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    content: {
+      paddingHorizontal: 20,
+      paddingTop: 20,
+      paddingBottom: 28,
+    },
+    filterWrap: {
+      paddingHorizontal: 20,
+      marginBottom: 16,
+    },
+    segmentContainer: {
+      height: 46,
+      marginBottom: 8,
+    },
+    segmentTab: {
+      borderColor: theme.border,
+      backgroundColor: theme.card,
+    },
+    segmentActiveTab: {},
+    segmentTabText: {
+      color: theme.textSecondary,
+      fontWeight: '700',
+      fontSize: 14,
+    },
+    segmentActiveTabText: {
+      color: '#FFFFFF',
+      fontWeight: '700',
+    },
+    listContent: {
+      paddingHorizontal: 20,
+      paddingTop: 16,
+      paddingBottom: 28,
+    },
+    listEmptyContent: {
+      flexGrow: 1,
+      paddingHorizontal: 20,
+    },
+    separator: {
+      height: 10,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      minHeight: 68,
+      borderRadius: 16,
+      paddingHorizontal: 14,
+      backgroundColor: theme.card,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    rowIconWrap: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 12,
+    },
+    rowIconDot: {
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+    },
+    rowBody: {
+      flex: 1,
+      marginRight: 8,
+    },
+    rowTitle: {
+      color: theme.textPrimary,
+      fontSize: 15,
+      fontWeight: '700',
+    },
+    rowSubtitle: {
+      color: theme.textSecondary,
+      fontSize: 12,
+      marginTop: 2,
+    },
+    rowAmount: {
+      fontSize: 15,
+      fontWeight: '800',
+    },
+    rowChevron: {
+      marginLeft: 6,
+      color: theme.textTertiary,
+    },
+    footerLoading: {
+      paddingVertical: 20,
+    },
+    emptyState: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingTop: 60,
+    },
+    emptyStateIcon: {
+      color: theme.textTertiary,
+    },
+    emptyStateTitle: {
+      color: theme.textPrimary,
+      fontSize: 16,
+      fontWeight: '700',
+      marginTop: 14,
+    },
+    emptyStateSubtitle: {
+      color: theme.textSecondary,
+      fontSize: 13,
+      marginTop: 4,
+      textAlign: 'center',
+    },
+    emptyStateButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 20,
+      paddingHorizontal: 18,
+      paddingVertical: 12,
+      borderRadius: 14,
+      backgroundColor: COLORS.PRIMARY,
+      gap: 6,
+    },
+    emptyStateButtonText: {
+      color: '#FFFFFF',
+      fontSize: 14,
+      fontWeight: '700',
+      marginLeft: 4,
+    },
+  });
 
 export default TransactionsScreen;
