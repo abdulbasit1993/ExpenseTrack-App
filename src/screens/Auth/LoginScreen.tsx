@@ -21,7 +21,6 @@ import EmailIcon from '../../assets/icons/email.svg';
 import PasswordIcon from '../../assets/icons/key.svg';
 import CustomButton from '../../components/CustomButton';
 import { api } from '../../services/apiService';
-import { storeJwtToken } from '../../utils/storeToken';
 import { useAuth } from '../../context/AuthContext';
 
 const { width, height } = Dimensions.get('window');
@@ -105,24 +104,35 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const handleLogin = async () => {
     try {
       setLoading(true);
-      const response = await api.post('/auth/login', { email, password });
-      const token = response?.data?.token;
-      const userData = response?.data?.user;
 
-      if (response?.success && token) {
-        setLoading(false);
-        await storeJwtToken(token);
-        await signIn(token);
+      const response = await api.post<{
+        success: boolean;
+        data: {
+          accessToken: string;
+          refreshToken: string;
+          user?: unknown;
+        };
+      }>('/auth/login', { email, password });
+
+      const accessToken = response?.data?.accessToken;
+      const refreshToken = response?.data?.refreshToken;
+
+      if (response?.success && accessToken && refreshToken) {
+        await signIn(accessToken, refreshToken);
+        return;
       }
+
+      Alert.alert('Error', 'The login response did not include valid tokens.');
     } catch (error) {
-      setLoading(false);
       if (error?.data?.message) {
-        Alert.alert('Error', error?.data?.message);
+        Alert.alert('Error', error.data.message);
       } else if (error?.message) {
-        Alert.alert('Error', error?.message);
+        Alert.alert('Error', error.message);
       } else {
-        Alert.alert('Error', 'Invalid email or password.');
+        Alert.alert('Error', 'Failed to login. Please try again.');
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -245,14 +255,14 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
             />
 
             {/* Divider */}
-            <View style={styles.dividerRow}>
+            {/* <View style={styles.dividerRow}>
               <View style={styles.dividerLine} />
               <Text style={styles.dividerText}>or</Text>
               <View style={styles.dividerLine} />
-            </View>
+            </View> */}
 
             {/* Social */}
-            <View style={styles.socialRow}>
+            {/* <View style={styles.socialRow}>
               <TouchableOpacity style={styles.socialBtn}>
                 <Text style={styles.socialIcon}>G</Text>
                 <Text style={styles.socialLabel}>Google</Text>
@@ -261,7 +271,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
                 <Text style={styles.socialIcon}>𝕏</Text>
                 <Text style={styles.socialLabel}>Twitter / X</Text>
               </TouchableOpacity>
-            </View>
+            </View> */}
           </View>
 
           {/* Footer */}

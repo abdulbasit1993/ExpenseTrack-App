@@ -31,7 +31,8 @@ import CustomButton from '../../components/CustomButton';
 import Header from '../../components/Header';
 import { getCurrencySymbol } from '../../utils/helpers';
 import { BASE_URL } from '../../config/apiUrl';
-import { getJwtToken } from '../../utils/storeToken';
+// import { getJwtToken } from '../../utils/storeToken';
+import { getAccessToken } from '../../services/apiService';
 
 type RootStackParamList = {
   Home: undefined;
@@ -125,7 +126,7 @@ const AddTransactionScreen = ({ navigation, route }: Props) => {
     setAiSuggestion(null);
 
     try {
-      const token = await getJwtToken();
+      const token = await getAccessToken();
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };

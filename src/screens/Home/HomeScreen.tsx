@@ -6,11 +6,11 @@ import {
   StyleSheet,
   StatusBar,
   Alert,
-  ActivityIndicator,
   RefreshControl,
   TouchableOpacity,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
+import SkeletonPlaceholder from 'react-native-skeleton-placeholder';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -327,6 +327,70 @@ const HomeScreen = () => {
     );
   };
 
+  const renderLoadingSkeleton = () => (
+    <View
+      style={styles.skeletonContent}
+      accessibilityRole="progressbar"
+      accessibilityLabel="Loading dashboard"
+    >
+      <SkeletonPlaceholder
+        backgroundColor={isDarkMode ? '#263449' : '#E2E8F0'}
+        highlightColor={isDarkMode ? '#334155' : '#F1F5F9'}
+      >
+        <SkeletonPlaceholder.Item style={styles.skeletonGreeting}>
+          <SkeletonPlaceholder.Item>
+            <SkeletonPlaceholder.Item width={110} height={16} borderRadius={6} />
+            <SkeletonPlaceholder.Item
+              width={180}
+              height={28}
+              borderRadius={8}
+              marginTop={8}
+            />
+          </SkeletonPlaceholder.Item>
+          <SkeletonPlaceholder.Item width={48} height={48} borderRadius={24} />
+        </SkeletonPlaceholder.Item>
+
+        <SkeletonPlaceholder.Item
+          height={184}
+          borderRadius={24}
+          marginBottom={28}
+        />
+
+        <SkeletonPlaceholder.Item style={styles.skeletonSectionHeader}>
+          <SkeletonPlaceholder.Item width={170} height={20} borderRadius={7} />
+          <SkeletonPlaceholder.Item width={72} height={14} borderRadius={6} />
+        </SkeletonPlaceholder.Item>
+        <SkeletonPlaceholder.Item height={158} borderRadius={20} />
+
+        <SkeletonPlaceholder.Item style={styles.skeletonSectionHeader}>
+          <SkeletonPlaceholder.Item width={190} height={20} borderRadius={7} />
+          <SkeletonPlaceholder.Item width={52} height={14} borderRadius={6} />
+        </SkeletonPlaceholder.Item>
+
+        {[0, 1, 2, 3, 4].map(item => (
+          <SkeletonPlaceholder.Item key={item} style={styles.skeletonTransaction}>
+            <SkeletonPlaceholder.Item width={46} height={46} borderRadius={15} />
+            <SkeletonPlaceholder.Item marginLeft={12} flex={1}>
+              <SkeletonPlaceholder.Item width="62%" height={15} borderRadius={6} />
+              <SkeletonPlaceholder.Item
+                width="42%"
+                height={12}
+                borderRadius={5}
+                marginTop={8}
+              />
+            </SkeletonPlaceholder.Item>
+            <SkeletonPlaceholder.Item
+              width={58}
+              height={14}
+              borderRadius={6}
+              marginLeft={8}
+            />
+          </SkeletonPlaceholder.Item>
+        ))}
+      </SkeletonPlaceholder>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <StatusBar
@@ -334,10 +398,8 @@ const HomeScreen = () => {
         backgroundColor={theme.background}
       />
 
-      {isLoading ? (
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={COLORS.PRIMARY} />
-        </View>
+      {isLoading || isRefreshing ? (
+        renderLoadingSkeleton()
       ) : (
         <FlashList
           data={recentTransactions}
@@ -380,10 +442,28 @@ const themeStyles = (theme: ThemeColors) =>
       paddingHorizontal: 20,
       paddingTop: 14,
     },
-    centered: {
+    skeletonContent: {
       flex: 1,
+      paddingHorizontal: 20,
+      paddingTop: 14,
+    },
+    skeletonGreeting: {
+      flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 24,
+    },
+    skeletonSectionHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: 28,
+      marginBottom: 13,
+    },
+    skeletonTransaction: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 14,
     },
     greetingContainer: {
       flexDirection: 'row',

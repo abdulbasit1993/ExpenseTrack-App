@@ -12,6 +12,7 @@
   "dependencies": {
     "@react-native-async-storage/async-storage": "^3.1.1",
     "@react-native-community/datetimepicker": "^9.1.0",
+    "@react-native-masked-view/masked-view": "^0.3.2",
     "@react-native-vector-icons/ionicons": "^13.1.2",
     "@react-native/new-app-screen": "0.85.3",
     "@react-navigation/bottom-tabs": "^7.16.2",
@@ -30,6 +31,7 @@
     "react-native-screens": "^4.25.2",
     "react-native-segmented-control-tab": "^4.0.0",
     "react-native-size-matters": "^0.4.2",
+    "react-native-skeleton-placeholder": "^5.2.4",
     "react-native-svg": "^15.15.5",
     "react-redux": "^9.3.0",
     "redux-persist": "^6.0.0",

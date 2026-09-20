@@ -30,7 +30,7 @@ import Icon from '@react-native-vector-icons/ionicons';
 import CustomButton from './CustomButton';
 import { formatDisplayDate, getCurrencySymbol } from '../utils/helpers';
 import { BASE_URL } from '../config/apiUrl';
-import { getJwtToken } from '../utils/storeToken';
+import { getAccessToken } from '../services/apiService';
 
 const EXPENSE_COLOR = '#EF4444';
 
@@ -116,22 +116,37 @@ const EditTransactionModal = ({
     setAiSuggestion(null);
 
     try {
-      const token = await getJwtToken();
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      const token = await getAccessToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
       if (token) headers.Authorization = `Bearer ${token}`;
 
       const response = await fetch(`${BASE_URL}/ai/suggest-category`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ title: title.trim(), description: description.trim(), type }),
+        body: JSON.stringify({
+          title: title.trim(),
+          description: description.trim(),
+          type,
+        }),
       });
       let data: any = null;
-      try { data = await response.json(); } catch { data = null; }
-      if (!response.ok) throw new Error(data?.message ?? 'Failed to get suggestion');
+      try {
+        data = await response.json();
+      } catch {
+        data = null;
+      }
+      if (!response.ok)
+        throw new Error(data?.message ?? 'Failed to get suggestion');
       if (data?.success && data.data) {
         const cat = categories.find(c => c._id === data.data.categoryId);
         if (cat) {
-          setAiSuggestion({ categoryId: cat._id, categoryName: cat.name, confidence: data.data.confidence });
+          setAiSuggestion({
+            categoryId: cat._id,
+            categoryName: cat.name,
+            confidence: data.data.confidence,
+          });
         }
       }
     } catch (error: any) {
@@ -144,7 +159,10 @@ const EditTransactionModal = ({
   const handleApplyAISuggestion = useCallback(() => {
     if (aiSuggestion) {
       const cat = categories.find(c => c._id === aiSuggestion.categoryId);
-      if (cat) { setSelectedCategory(cat); setAiSuggestion(null); }
+      if (cat) {
+        setSelectedCategory(cat);
+        setAiSuggestion(null);
+      }
     }
   }, [aiSuggestion, categories]);
 
@@ -246,13 +264,22 @@ const EditTransactionModal = ({
                     {selectedCategory?.name ?? 'Select a category'}
                   </Text>
                 </View>
-                <Icon name="chevron-down" size={18} color={theme.textTertiary} />
+                <Icon
+                  name="chevron-down"
+                  size={18}
+                  color={theme.textTertiary}
+                />
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.aiSuggestButton, isAISuggesting && styles.aiSuggestButtonLoading]}
+                style={[
+                  styles.aiSuggestButton,
+                  isAISuggesting && styles.aiSuggestButtonLoading,
+                ]}
                 onPress={handleAISuggestCategory}
-                disabled={isAISuggesting || (!title.trim() && !description.trim())}
+                disabled={
+                  isAISuggesting || (!title.trim() && !description.trim())
+                }
                 activeOpacity={0.8}
               >
                 {isAISuggesting ? (
@@ -268,11 +295,20 @@ const EditTransactionModal = ({
                 <View style={styles.aiSuggestionContent}>
                   <Icon name="sparkles" size={16} color={COLORS.PRIMARY} />
                   <Text style={styles.aiSuggestionText}>
-                    AI: <Text style={styles.aiSuggestionCategory}>{aiSuggestion.categoryName}</Text>
-                    {' '}<Text style={styles.aiSuggestionConfidence}>({Math.round(aiSuggestion.confidence * 100)}%)</Text>
+                    AI:{' '}
+                    <Text style={styles.aiSuggestionCategory}>
+                      {aiSuggestion.categoryName}
+                    </Text>{' '}
+                    <Text style={styles.aiSuggestionConfidence}>
+                      ({Math.round(aiSuggestion.confidence * 100)}%)
+                    </Text>
                   </Text>
                 </View>
-                <TouchableOpacity style={styles.aiSuggestionApplyButton} onPress={handleApplyAISuggestion} activeOpacity={0.8}>
+                <TouchableOpacity
+                  style={styles.aiSuggestionApplyButton}
+                  onPress={handleApplyAISuggestion}
+                  activeOpacity={0.8}
+                >
                   <Text style={styles.aiSuggestionApplyText}>Apply</Text>
                 </TouchableOpacity>
               </View>
@@ -645,7 +681,11 @@ const makeStyles = (theme: ThemeColors) =>
       alignItems: 'center',
       gap: 6,
     },
-    aiSuggestionText: { color: theme.textPrimary, fontSize: 13, fontWeight: '500' },
+    aiSuggestionText: {
+      color: theme.textPrimary,
+      fontSize: 13,
+      fontWeight: '500',
+    },
     aiSuggestionCategory: { fontWeight: '700', color: theme.textPrimary },
     aiSuggestionConfidence: { color: COLORS.PRIMARY, fontSize: 12 },
     aiSuggestionApplyButton: {
@@ -654,7 +694,11 @@ const makeStyles = (theme: ThemeColors) =>
       backgroundColor: COLORS.PRIMARY,
       borderRadius: 8,
     },
-    aiSuggestionApplyText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+    aiSuggestionApplyText: {
+      color: '#FFFFFF',
+      fontSize: 13,
+      fontWeight: '700',
+    },
   });
 
 export default EditTransactionModal;

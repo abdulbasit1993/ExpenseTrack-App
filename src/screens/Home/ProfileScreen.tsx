@@ -33,6 +33,7 @@ import {
   Asset,
 } from 'react-native-image-picker';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 
 type ProfileScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -284,11 +285,28 @@ const makeStyles = (theme: ThemeColors) =>
       fontSize: 15,
       fontWeight: '700',
     },
+    logoutButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      borderWidth: 1,
+      borderColor: '#EF4444',
+      borderRadius: 14,
+      paddingVertical: 14,
+      marginTop: 4,
+    },
+    logoutButtonText: {
+      color: '#DC2626',
+      fontSize: 15,
+      fontWeight: '800',
+    },
   });
 
 const ProfileScreen = () => {
   const navigation = useNavigation<ProfileScreenNavigationProp>();
   const dispatch = useDispatch<AppDispatch>();
+  const { signOut } = useAuth();
   const { isDarkMode } = useTheme();
   const theme = getThemeColors(isDarkMode);
   const styles = useMemo(() => makeStyles(theme), [theme]);
@@ -324,6 +342,7 @@ const ProfileScreen = () => {
   });
   const [localImageAsset, setLocalImageAsset] = useState<Asset | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Load the user on mount if not already present.
   useEffect(() => {
@@ -361,6 +380,26 @@ const ProfileScreen = () => {
 
   const handlePreferencesPress = () => {
     navigation.navigate('Preferences');
+  };
+
+  const handleLogout = () => {
+    Alert.alert('Log out', 'Are you sure you want to log out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Log out',
+        style: 'destructive',
+        onPress: async () => {
+          setIsLoggingOut(true);
+
+          try {
+            await signOut();
+          } catch {
+            setIsLoggingOut(false);
+            Alert.alert('Logout failed', 'Unable to log out. Please try again.');
+          }
+        },
+      },
+    ]);
   };
 
   const handleChange = (key: keyof FieldErrors, value: string) => {
@@ -735,6 +774,24 @@ const ProfileScreen = () => {
               <Icon name="chevron-forward" size={20} color={COLORS.SECONDARY} />
             </TouchableOpacity>
           </View>
+
+          <TouchableOpacity
+            style={[styles.logoutButton, isLoggingOut && styles.buttonDisabled]}
+            onPress={handleLogout}
+            disabled={isLoggingOut}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Log out"
+          >
+            {isLoggingOut ? (
+              <ActivityIndicator size="small" color="#DC2626" />
+            ) : (
+              <>
+                <Icon name="log-out-outline" size={20} color="#DC2626" />
+                <Text style={styles.logoutButtonText}>Log out</Text>
+              </>
+            )}
+          </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

@@ -16,6 +16,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
+import SkeletonPlaceholder from 'react-native-skeleton-placeholder';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -306,6 +307,46 @@ const TransactionsScreen = ({ navigation }: Props) => {
   const typeFilterIndex =
     typeFilter === 'all' ? 0 : typeFilter === 'expense' ? 1 : 2;
 
+  const renderLoadingSkeleton = () => (
+    <View
+      style={styles.skeletonContent}
+      accessibilityRole="progressbar"
+      accessibilityLabel="Loading transactions"
+    >
+      <SkeletonPlaceholder
+        backgroundColor={isDarkMode ? '#263449' : '#E2E8F0'}
+        highlightColor={isDarkMode ? '#334155' : '#F1F5F9'}
+      >
+        {[0, 1, 2, 3, 4, 5, 6].map(item => (
+          <SkeletonPlaceholder.Item key={item} style={styles.skeletonRow}>
+            <SkeletonPlaceholder.Item width={40} height={40} borderRadius={12} />
+            <SkeletonPlaceholder.Item marginLeft={12} flex={1}>
+              <SkeletonPlaceholder.Item width="64%" height={15} borderRadius={6} />
+              <SkeletonPlaceholder.Item
+                width="45%"
+                height={12}
+                borderRadius={5}
+                marginTop={7}
+              />
+            </SkeletonPlaceholder.Item>
+            <SkeletonPlaceholder.Item
+              width={54}
+              height={15}
+              borderRadius={6}
+              marginLeft={8}
+            />
+            <SkeletonPlaceholder.Item
+              width={16}
+              height={16}
+              borderRadius={8}
+              marginLeft={6}
+            />
+          </SkeletonPlaceholder.Item>
+        ))}
+      </SkeletonPlaceholder>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
       <Header
@@ -338,10 +379,8 @@ const TransactionsScreen = ({ navigation }: Props) => {
         />
       </View>
 
-      {isLoading ? (
-        <View style={styles.centered}>
-          <ActivityIndicator color={COLORS.PRIMARY} size="large" />
-        </View>
+      {isLoading || isRefreshing ? (
+        renderLoadingSkeleton()
       ) : (
         <FlashList
           data={transactions}
@@ -419,10 +458,17 @@ const makeStyles = (theme: ThemeColors) =>
     keyboardView: {
       flex: 1,
     },
-    centered: {
+    skeletonContent: {
       flex: 1,
+      paddingHorizontal: 20,
+      paddingTop: 16,
+    },
+    skeletonRow: {
+      flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center',
+      minHeight: 68,
+      paddingHorizontal: 14,
+      marginBottom: 10,
     },
     content: {
       paddingHorizontal: 20,

@@ -3,7 +3,7 @@ import React, { createContext, useContext } from 'react';
 type AuthContextType = {
   userToken: string | null;
   isLoading: boolean;
-  signIn: (token: string) => Promise<void>;
+  signIn: (accessToken: string, refreshToken: string) => Promise<void>;
   signOut: () => Promise<void>;
 };
 

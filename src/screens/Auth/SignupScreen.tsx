@@ -22,7 +22,6 @@ import EmailIcon from '../../assets/icons/email.svg';
 import PasswordIcon from '../../assets/icons/key.svg';
 import UserIcon from '../../assets/icons/user.svg';
 import CustomButton from '../../components/CustomButton';
-import { storeJwtToken } from '../../utils/storeToken';
 import { useAuth } from '../../context/AuthContext';
 
 const { width, height } = Dimensions.get('window');
@@ -108,48 +107,54 @@ const SignupScreen: React.FC<Props> = ({ navigation }) => {
   const orb2X = orb2.interpolate({ inputRange: [0, 1], outputRange: [0, -12] });
 
   const handleSignup = async () => {
-    setLoading(true);
-
     if (!firstName || !lastName || !email || !password) {
-      setLoading(false);
       Alert.alert('Error', 'Please fill in all fields.');
       return;
     }
 
     if (password !== confirmPassword) {
-      setLoading(false);
       Alert.alert('Error', 'Passwords do not match.');
       return;
     }
 
-    let payload = {
-      email,
-      password,
-      firstName,
-      lastName,
-    };
-
     try {
-      const response = await api.post('/auth/register', payload);
+      setLoading(true);
 
-      const token = response?.data?.token;
-      const userData = response?.data?.user;
+      const response = await api.post<{
+        success: boolean;
+        data: {
+          accessToken: string;
+          refreshToken: string;
+          user?: unknown;
+        };
+      }>('/auth/register', {
+        email,
+        password,
+        firstName,
+        lastName,
+      });
 
-      if (response?.success && token) {
-        setLoading(false);
-        await storeJwtToken(token);
-        await signIn(token);
+      const accessToken = response?.data?.accessToken;
+      const refreshToken = response?.data?.refreshToken;
+
+      if (response?.success && accessToken && refreshToken) {
+        await signIn(accessToken, refreshToken);
       }
+
+      Alert.alert(
+        'Error',
+        'The registration response did not include valid tokens.',
+      );
     } catch (error) {
-      console.log('Error (signup): ', error);
-      setLoading(false);
       if (error?.data?.message) {
-        Alert.alert('Error', error?.data?.message);
+        Alert.alert('Error', error.data.message);
       } else if (error?.message) {
-        Alert.alert('Error', error?.message);
+        Alert.alert('Error', error.message);
       } else {
         Alert.alert('Error', 'Failed to sign up. Please try again.');
       }
+    } finally {
+      setLoading(false);
     }
   };
 

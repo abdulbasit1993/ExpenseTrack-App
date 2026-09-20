@@ -1,44 +1,24 @@
 import * as Keychain from 'react-native-keychain';
 
-export async function storeJwtToken(token: string) {
-  try {
-    await Keychain.setGenericPassword('jwt', token, {
-      service: 'com.expensetrack.jwt',
-    });
+const REFRESH_TOKEN_SERVICE = 'com.expensetrack.refresh-token';
 
-    console.log('Token stored successfully');
-  } catch (error) {
-    console.error('Error storing token: ', error);
-  }
+export async function storeRefreshToken(refreshToken: string): Promise<void> {
+  await Keychain.setGenericPassword('refresh-token', refreshToken, {
+    service: REFRESH_TOKEN_SERVICE,
+    accessible: Keychain.ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+  });
 }
 
-export async function getJwtToken() {
-  try {
-    const credentials = await Keychain.getGenericPassword({
-      service: 'com.expensetrack.jwt',
-    });
-    if (credentials) {
-      console.log('Token retrieved successfully');
-      return credentials.password;
-    } else {
-      console.log('No token found');
-      return null;
-    }
-  } catch (error) {
-    console.error('Error getting token: ', error);
-    return null;
-  }
+export async function getRefreshToken(): Promise<string | null> {
+  const credentials = await Keychain.getGenericPassword({
+    service: REFRESH_TOKEN_SERVICE,
+  });
+
+  return credentials ? credentials.password : null;
 }
 
-export async function removeJwtToken() {
-  try {
-    await Keychain.resetGenericPassword({
-      service: 'com.expensetrack.jwt',
-    });
-    console.log('Token removed successfully');
-    return true;
-  } catch (error) {
-    console.error('Error removing token: ', error);
-    return false;
-  }
+export async function removeRefreshToken(): Promise<void> {
+  await Keychain.resetGenericPassword({
+    service: REFRESH_TOKEN_SERVICE,
+  });
 }

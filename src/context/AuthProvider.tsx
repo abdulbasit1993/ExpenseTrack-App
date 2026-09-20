@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { AuthContext } from './AuthContext';
-import { getJwtToken, removeJwtToken } from '../utils/storeToken';
+import { getRefreshToken, storeRefreshToken } from '../utils/storeToken';
+import { api, clearAuthTokens, setAccessToken } from '../services/apiService';
 import { clearUser, fetchCurrentUser } from '../store/userSlice';
 import { clearCategories, fetchCategories } from '../store/categoriesSlice';
 import type { AppDispatch } from '../store/store';
@@ -14,6 +15,13 @@ export default function AuthProvider({ children }: Props) {
   const dispatch = useDispatch<AppDispatch>();
   const [userToken, setUserToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const clearAuthenticatedState = async () => {
+    await clearAuthTokens();
+    dispatch(clearUser());
+    dispatch(clearCategories());
+    setUserToken(null);
+  };
 
   const loadAuthenticatedData = async () => {
     await dispatch(fetchCurrentUser()).unwrap();
@@ -31,28 +39,29 @@ export default function AuthProvider({ children }: Props) {
 
     const restoreSession = async () => {
       try {
-        const token = await getJwtToken();
+        const refreshToken = await getRefreshToken();
 
-        if (!token) {
+        if (!refreshToken) {
           dispatch(clearUser());
           dispatch(clearCategories());
           return;
         }
 
+        const accessToken = await api.refreshAccessToken();
+
+        if (!accessToken) {
+          await clearAuthenticatedState();
+          return;
+        }
+
         if (isMounted) {
-          setUserToken(token);
+          setUserToken(accessToken);
         }
 
         await loadAuthenticatedData();
       } catch (error) {
         console.log('Error restoring session: ', error);
-        await removeJwtToken();
-        dispatch(clearUser());
-        dispatch(clearCategories());
-
-        if (isMounted) {
-          setUserToken(null);
-        }
+        await clearAuthenticatedState();
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -67,17 +76,16 @@ export default function AuthProvider({ children }: Props) {
     };
   }, [dispatch]);
 
-  const signIn = async (token: string) => {
+  const signIn = async (accessToken: string, refreshToken: string) => {
     setIsLoading(true);
-    setUserToken(token);
 
     try {
+      await storeRefreshToken(refreshToken);
+      setAccessToken(accessToken);
+      setUserToken(accessToken);
       await loadAuthenticatedData();
     } catch (error) {
-      await removeJwtToken();
-      dispatch(clearUser());
-      dispatch(clearCategories());
-      setUserToken(null);
+      await clearAuthenticatedState();
       throw error;
     } finally {
       setIsLoading(false);
@@ -85,10 +93,17 @@ export default function AuthProvider({ children }: Props) {
   };
 
   const signOut = async () => {
-    await removeJwtToken();
-    dispatch(clearUser());
-    dispatch(clearCategories());
-    setUserToken(null);
+    const refreshToken = await getRefreshToken();
+
+    if (refreshToken) {
+      try {
+        await api.post('/auth/logout', { refreshToken });
+      } catch (error) {
+        console.log('Error signing out: ', error);
+      }
+    }
+
+    await clearAuthenticatedState();
   };
 
   return (
