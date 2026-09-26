@@ -12,15 +12,17 @@ import {
   Platform,
   StatusBar,
   Alert,
+  ToastAndroid,
 } from 'react-native';
+import { api } from '../../services/apiService';
 import { NavigationProp } from '@react-navigation/native';
 import { COLORS } from '../../constants/colors';
 import EyeIcon from '../../assets/icons/eye.svg';
 import EyeOffIcon from '../../assets/icons/eye-off.svg';
 import EmailIcon from '../../assets/icons/email.svg';
 import PasswordIcon from '../../assets/icons/key.svg';
+import UserIcon from '../../assets/icons/user.svg';
 import CustomButton from '../../components/CustomButton';
-import { api } from '../../services/apiService';
 import { useAuth } from '../../context/AuthContext';
 
 const { width, height } = Dimensions.get('window');
@@ -29,12 +31,14 @@ type Props = {
   navigation: NavigationProp<any>;
 };
 
-const LoginScreen: React.FC<Props> = ({ navigation }) => {
-  const [email, setEmail] = useState('');
+const ResetPasswordScreen: React.FC<Props> = ({ navigation, route }) => {
+  const { email, otp } = route.params;
+
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(40)).current;
@@ -101,35 +105,40 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const orb1X = orb1.interpolate({ inputRange: [0, 1], outputRange: [0, 10] });
   const orb2X = orb2.interpolate({ inputRange: [0, 1], outputRange: [0, -12] });
 
-  const handleLogin = async () => {
+  const handleSubmit = async () => {
+    if (!password) {
+      Alert.alert('Error', 'Please enter a password.');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert('Error', 'Passwords do not match.');
+      return;
+    }
+
     try {
       setLoading(true);
 
-      const response = await api.post<{
-        success: boolean;
-        data: {
-          accessToken: string;
-          refreshToken: string;
-          user?: unknown;
-        };
-      }>('/auth/login', { email, password });
+      const payload = {
+        email,
+        otpCode: otp,
+        newPassword: password,
+      };
 
-      const accessToken = response?.data?.accessToken;
-      const refreshToken = response?.data?.refreshToken;
+      const resp = await api.post('/auth/reset-password', payload);
 
-      if (response?.success && accessToken && refreshToken) {
-        await signIn(accessToken, refreshToken);
-        return;
+      if (resp?.success) {
+        ToastAndroid.show('Password Reset Successful', ToastAndroid.SHORT);
+        // Navigate on success
+        navigation.navigate('Login');
       }
-
-      Alert.alert('Error', 'The login response did not include valid tokens.');
     } catch (error) {
       if (error?.data?.message) {
         Alert.alert('Error', error.data.message);
       } else if (error?.message) {
         Alert.alert('Error', error.message);
       } else {
-        Alert.alert('Error', 'Failed to login. Please try again.');
+        Alert.alert('Error', 'Failed to reset password. Please try again.');
       }
     } finally {
       setLoading(false);
@@ -200,22 +209,10 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
 
           {/* Card */}
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Welcome Back</Text>
-            <Text style={styles.cardSub}>Sign in to your account</Text>
-
-            {/* Email */}
-            <View style={[styles.fieldWrap]}>
-              <EmailIcon width={22} height={22} />
-              <TextInput
-                style={styles.input}
-                placeholder="Email"
-                placeholderTextColor="#5A5670"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
+            <Text style={styles.cardTitle}>Reset Password</Text>
+            <Text style={styles.cardSub}>
+              Enter your new password and confirm it.
+            </Text>
 
             {/* Password */}
             <View style={[styles.fieldWrap]}>
@@ -240,51 +237,37 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
               </TouchableOpacity>
             </View>
 
-            {/* Forgot */}
-            <TouchableOpacity
-              onPress={() => {
-                navigation.navigate('ForgotPassword');
-              }}
-              style={styles.forgotRow}
-            >
-              <Text style={styles.forgotText}>Forgot password?</Text>
-            </TouchableOpacity>
+            {/* Confirm Password */}
+            <View style={[styles.fieldWrap]}>
+              <PasswordIcon width={22} height={22} />
+              <TextInput
+                style={styles.input}
+                placeholder="Confirm Password"
+                placeholderTextColor="#5A5670"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry={!showConfirmPassword}
+              />
+              <TouchableOpacity
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                // style={styles.eyeBtn}
+              >
+                {showConfirmPassword ? (
+                  <EyeOffIcon width={24} height={24} />
+                ) : (
+                  <EyeIcon width={24} height={24} />
+                )}
+              </TouchableOpacity>
+            </View>
 
-            {/* Sign in button */}
+            {/* Submit button */}
             <CustomButton
-              title="Sign In"
+              title="Submit"
               onPress={() => {
-                handleLogin();
+                handleSubmit();
               }}
               loading={loading}
             />
-
-            {/* Divider */}
-            {/* <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
-              <View style={styles.dividerLine} />
-            </View> */}
-
-            {/* Social */}
-            {/* <View style={styles.socialRow}>
-              <TouchableOpacity style={styles.socialBtn}>
-                <Text style={styles.socialIcon}>G</Text>
-                <Text style={styles.socialLabel}>Google</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.socialBtn}>
-                <Text style={styles.socialIcon}>𝕏</Text>
-                <Text style={styles.socialLabel}>Twitter / X</Text>
-              </TouchableOpacity>
-            </View> */}
-          </View>
-
-          {/* Footer */}
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
-              <Text style={styles.footerLink}>Create one</Text>
-            </TouchableOpacity>
           </View>
         </Animated.View>
       </ScrollView>
@@ -555,4 +538,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default LoginScreen;
+export default ResetPasswordScreen;

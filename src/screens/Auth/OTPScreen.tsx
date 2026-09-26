@@ -12,6 +12,9 @@ import {
   Platform,
   StatusBar,
   Alert,
+  NativeSyntheticEvent,
+  TextInputKeyPressEventData,
+  ToastAndroid,
 } from 'react-native';
 import { NavigationProp } from '@react-navigation/native';
 import { COLORS } from '../../constants/colors';
@@ -21,20 +24,110 @@ import EmailIcon from '../../assets/icons/email.svg';
 import PasswordIcon from '../../assets/icons/key.svg';
 import CustomButton from '../../components/CustomButton';
 import { api } from '../../services/apiService';
-import { useAuth } from '../../context/AuthContext';
 
 const { width, height } = Dimensions.get('window');
+const OTP_LENGTH = 6;
+
+type OTPInputProps = {
+  length: number;
+  value: string;
+  focusIndex: number;
+  onChangeText: (value: string) => void;
+  onFocus: (index: number) => void;
+  onBlur: () => void;
+};
+
+const OTPInput: React.FC<OTPInputProps> = ({
+  length,
+  value,
+  focusIndex,
+  onChangeText,
+  onFocus,
+  onBlur,
+}) => {
+  const inputRefs = useRef<(TextInput | null)[]>([]);
+
+  const handleKeyPress = (
+    index: number,
+    event: NativeSyntheticEvent<TextInputKeyPressEventData>,
+  ) => {
+    if (event.nativeEvent.key !== 'Backspace') return;
+
+    if (value[index]) {
+      onChangeText(value.slice(0, index) + value.slice(index + 1));
+    } else if (index > 0 && value[index - 1]) {
+      onChangeText(value.slice(0, index - 1) + value.slice(index));
+      inputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  return (
+    <View style={styles.otpRow}>
+      {Array.from({ length }).map((_, index) => (
+        <TextInput
+          key={index}
+          ref={ref => {
+            inputRefs.current[index] = ref;
+          }}
+          style={[
+            styles.otpInput,
+            index === focusIndex && styles.otpInputFocused,
+          ]}
+          keyboardType="number-pad"
+          maxLength={1}
+          value={value[index] ?? ''}
+          onChangeText={text => {
+            const digits = text.replace(/\D/g, '');
+            if (!digits) return;
+
+            const nextValue =
+              value.slice(0, index) + digits.charAt(0) + value.slice(index + 1);
+            const cleaned = nextValue.replace(/\D/g, '').slice(0, length);
+            onChangeText(cleaned);
+
+            if (index < length - 1) {
+              inputRefs.current[index + 1]?.focus();
+            }
+          }}
+          onKeyPress={event => handleKeyPress(index, event)}
+          onFocus={() => onFocus(index)}
+          onBlur={() => {
+            if (index === length - 1) {
+              onBlur();
+            }
+          }}
+          autoFocus={index === 0}
+          blurOnSubmit={false}
+        />
+      ))}
+    </View>
+  );
+};
 
 type Props = {
   navigation: NavigationProp<any>;
 };
 
-const LoginScreen: React.FC<Props> = ({ navigation }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+const OTPScreen: React.FC<Props> = ({ navigation, route }) => {
+  const { email } = route.params;
   const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
+  const [otp, setOtp] = useState('');
+  const [focusIndex, setFocusIndex] = useState(0);
+  const [resendTimer, setResendTimer] = useState(60);
+  const [canResend, setCanResend] = useState(false);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setResendTimer(prev => {
+        if (prev <= 1) {
+          setCanResend(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(40)).current;
@@ -101,36 +194,52 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const orb1X = orb1.interpolate({ inputRange: [0, 1], outputRange: [0, 10] });
   const orb2X = orb2.interpolate({ inputRange: [0, 1], outputRange: [0, -12] });
 
-  const handleLogin = async () => {
+  const handleResend = async () => {
+    if (!canResend) return;
+    setResendTimer(60);
+    setCanResend(false);
+
+    setLoading(true);
+
     try {
-      setLoading(true);
+      const resp = await api.post('/auth/forgot-password', { email });
 
-      const response = await api.post<{
-        success: boolean;
-        data: {
-          accessToken: string;
-          refreshToken: string;
-          user?: unknown;
-        };
-      }>('/auth/login', { email, password });
-
-      const accessToken = response?.data?.accessToken;
-      const refreshToken = response?.data?.refreshToken;
-
-      if (response?.success && accessToken && refreshToken) {
-        await signIn(accessToken, refreshToken);
-        return;
+      if (resp?.success) {
+        ToastAndroid.show('OTP Resent', ToastAndroid.SHORT);
+        setResendTimer(60);
+        setCanResend(false);
       }
-
-      Alert.alert('Error', 'The login response did not include valid tokens.');
     } catch (error) {
-      if (error?.data?.message) {
-        Alert.alert('Error', error.data.message);
-      } else if (error?.message) {
-        Alert.alert('Error', error.message);
-      } else {
-        Alert.alert('Error', 'Failed to login. Please try again.');
+      Alert.alert('Error', error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
+
+  const handleSubmit = async () => {
+    setLoading(true);
+
+    const payload = {
+      email,
+      otpCode: otp,
+    };
+
+    try {
+      const resp = await api.post('/auth/verify-otp', payload);
+
+      if (resp?.success) {
+        // Navigate on success
+        navigation.navigate('ResetPassword', { email, otp });
       }
+    } catch (error) {
+      console.log('error (verify-otp) ===>> ', error);
+      Alert.alert('Error', error.message);
     } finally {
       setLoading(false);
     }
@@ -200,91 +309,68 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
 
           {/* Card */}
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Welcome Back</Text>
-            <Text style={styles.cardSub}>Sign in to your account</Text>
+            <Text style={styles.cardTitle}>Enter OTP</Text>
+            <Text style={styles.cardSub}>
+              Enter the OTP code we sent to {email}
+            </Text>
 
-            {/* Email */}
-            <View style={[styles.fieldWrap]}>
-              <EmailIcon width={22} height={22} />
-              <TextInput
-                style={styles.input}
-                placeholder="Email"
-                placeholderTextColor="#5A5670"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
+            <OTPInput
+              length={OTP_LENGTH}
+              value={otp}
+              focusIndex={focusIndex}
+              onChangeText={nextOtp => {
+                setOtp(nextOtp);
 
-            {/* Password */}
-            <View style={[styles.fieldWrap]}>
-              <PasswordIcon width={22} height={22} />
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                placeholderTextColor="#5A5670"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-              />
+                if (nextOtp.length === OTP_LENGTH) {
+                  // handleSubmit();
+                }
+              }}
+              onFocus={setFocusIndex}
+              onBlur={() => {
+                if (
+                  focusIndex === OTP_LENGTH - 1 &&
+                  otp.length === OTP_LENGTH
+                ) {
+                  // handleSubmit();
+                }
+              }}
+            />
+
+            {/* Resend timer */}
+            <View style={styles.timerRow}>
+              <Text style={styles.timerText}>
+                Didn't receive the code?{' '}
+                <Text style={styles.timerLabel}>
+                  Resend in {formatTime(resendTimer)}
+                </Text>
+              </Text>
               <TouchableOpacity
-                onPress={() => setShowPassword(!showPassword)}
-                // style={styles.eyeBtn}
+                style={[
+                  styles.resendBtn,
+                  !canResend && styles.resendBtnDisabled,
+                ]}
+                onPress={handleResend}
+                disabled={!canResend}
               >
-                {showPassword ? (
-                  <EyeOffIcon width={24} height={24} />
-                ) : (
-                  <EyeIcon width={24} height={24} />
-                )}
+                <Text
+                  style={[
+                    styles.resendText,
+                    !canResend && styles.resendTextDisabled,
+                  ]}
+                >
+                  Resend
+                </Text>
               </TouchableOpacity>
             </View>
 
-            {/* Forgot */}
-            <TouchableOpacity
-              onPress={() => {
-                navigation.navigate('ForgotPassword');
-              }}
-              style={styles.forgotRow}
-            >
-              <Text style={styles.forgotText}>Forgot password?</Text>
-            </TouchableOpacity>
-
-            {/* Sign in button */}
+            {/* Submit button */}
             <CustomButton
-              title="Sign In"
+              title="Submit"
               onPress={() => {
-                handleLogin();
+                handleSubmit();
               }}
               loading={loading}
             />
-
-            {/* Divider */}
-            {/* <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
-              <View style={styles.dividerLine} />
-            </View> */}
-
-            {/* Social */}
-            {/* <View style={styles.socialRow}>
-              <TouchableOpacity style={styles.socialBtn}>
-                <Text style={styles.socialIcon}>G</Text>
-                <Text style={styles.socialLabel}>Google</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.socialBtn}>
-                <Text style={styles.socialIcon}>𝕏</Text>
-                <Text style={styles.socialLabel}>Twitter / X</Text>
-              </TouchableOpacity>
-            </View> */}
-          </View>
-
-          {/* Footer */}
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
-              <Text style={styles.footerLink}>Create one</Text>
-            </TouchableOpacity>
           </View>
         </Animated.View>
       </ScrollView>
@@ -422,6 +508,33 @@ const styles = StyleSheet.create({
     color: '#6B6880',
     marginBottom: 24,
   },
+  otpRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  otpInput: {
+    width: 46,
+    height: 58,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    color: '#FFFFFF',
+    fontSize: 24,
+    fontWeight: '700',
+    textAlign: 'center',
+    letterSpacing: 2,
+  },
+  otpInputFocused: {
+    borderColor: COLORS.PRIMARY,
+    backgroundColor: 'rgba(99,102,241,0.10)',
+    shadowColor: COLORS.PRIMARY,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 4,
+  },
   fieldWrap: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -553,6 +666,41 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  timerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginBottom: 20,
+    marginTop: 4,
+  },
+  timerText: {
+    color: '#6B6880',
+    fontSize: 13,
+    fontWeight: '400',
+    marginRight: 6,
+  },
+  timerLabel: {
+    color: COLORS.PRIMARY_LIGHT,
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  resendBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: COLORS.PRIMARY,
+  },
+  resendBtnDisabled: {
+    backgroundColor: 'rgba(99,102,241,0.3)',
+  },
+  resendText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  resendTextDisabled: {
+    color: 'rgba(255,255,255,0.4)',
+  },
 });
 
-export default LoginScreen;
+export default OTPScreen;

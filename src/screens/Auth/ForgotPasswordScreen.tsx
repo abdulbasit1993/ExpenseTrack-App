@@ -21,7 +21,6 @@ import EmailIcon from '../../assets/icons/email.svg';
 import PasswordIcon from '../../assets/icons/key.svg';
 import CustomButton from '../../components/CustomButton';
 import { api } from '../../services/apiService';
-import { useAuth } from '../../context/AuthContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -29,12 +28,9 @@ type Props = {
   navigation: NavigationProp<any>;
 };
 
-const LoginScreen: React.FC<Props> = ({ navigation }) => {
+const ForgotPasswordScreen: React.FC<Props> = ({ navigation }) => {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(40)).current;
@@ -101,36 +97,17 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
   const orb1X = orb1.interpolate({ inputRange: [0, 1], outputRange: [0, 10] });
   const orb2X = orb2.interpolate({ inputRange: [0, 1], outputRange: [0, -12] });
 
-  const handleLogin = async () => {
+  const handleSubmit = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
+      const resp = await api.post('/auth/forgot-password', { email });
 
-      const response = await api.post<{
-        success: boolean;
-        data: {
-          accessToken: string;
-          refreshToken: string;
-          user?: unknown;
-        };
-      }>('/auth/login', { email, password });
-
-      const accessToken = response?.data?.accessToken;
-      const refreshToken = response?.data?.refreshToken;
-
-      if (response?.success && accessToken && refreshToken) {
-        await signIn(accessToken, refreshToken);
-        return;
+      if (resp?.success) {
+        // Navigate on success
+        navigation.navigate('OTP', { email });
       }
-
-      Alert.alert('Error', 'The login response did not include valid tokens.');
     } catch (error) {
-      if (error?.data?.message) {
-        Alert.alert('Error', error.data.message);
-      } else if (error?.message) {
-        Alert.alert('Error', error.message);
-      } else {
-        Alert.alert('Error', 'Failed to login. Please try again.');
-      }
+      Alert.alert('Error', error.message);
     } finally {
       setLoading(false);
     }
@@ -200,8 +177,11 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
 
           {/* Card */}
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Welcome Back</Text>
-            <Text style={styles.cardSub}>Sign in to your account</Text>
+            <Text style={styles.cardTitle}>Forgot Password</Text>
+            <Text style={styles.cardSub}>
+              Enter your email address and we'll send you an email with an OTP
+              code to reset your password.
+            </Text>
 
             {/* Email */}
             <View style={[styles.fieldWrap]}>
@@ -217,74 +197,14 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
               />
             </View>
 
-            {/* Password */}
-            <View style={[styles.fieldWrap]}>
-              <PasswordIcon width={22} height={22} />
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                placeholderTextColor="#5A5670"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-              />
-              <TouchableOpacity
-                onPress={() => setShowPassword(!showPassword)}
-                // style={styles.eyeBtn}
-              >
-                {showPassword ? (
-                  <EyeOffIcon width={24} height={24} />
-                ) : (
-                  <EyeIcon width={24} height={24} />
-                )}
-              </TouchableOpacity>
-            </View>
-
-            {/* Forgot */}
-            <TouchableOpacity
-              onPress={() => {
-                navigation.navigate('ForgotPassword');
-              }}
-              style={styles.forgotRow}
-            >
-              <Text style={styles.forgotText}>Forgot password?</Text>
-            </TouchableOpacity>
-
-            {/* Sign in button */}
+            {/* Submit button */}
             <CustomButton
-              title="Sign In"
+              title="Submit"
               onPress={() => {
-                handleLogin();
+                handleSubmit();
               }}
               loading={loading}
             />
-
-            {/* Divider */}
-            {/* <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
-              <View style={styles.dividerLine} />
-            </View> */}
-
-            {/* Social */}
-            {/* <View style={styles.socialRow}>
-              <TouchableOpacity style={styles.socialBtn}>
-                <Text style={styles.socialIcon}>G</Text>
-                <Text style={styles.socialLabel}>Google</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.socialBtn}>
-                <Text style={styles.socialIcon}>𝕏</Text>
-                <Text style={styles.socialLabel}>Twitter / X</Text>
-              </TouchableOpacity>
-            </View> */}
-          </View>
-
-          {/* Footer */}
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
-              <Text style={styles.footerLink}>Create one</Text>
-            </TouchableOpacity>
           </View>
         </Animated.View>
       </ScrollView>
@@ -555,4 +475,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default LoginScreen;
+export default ForgotPasswordScreen;
