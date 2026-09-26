@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,7 +16,9 @@ import Icon from '@react-native-vector-icons/ionicons';
 import type { AppDispatch, RootState } from '../store/store';
 import { updateUserPreferences } from '../store/userSlice';
 import { getCurrencySymbol } from '../utils/helpers';
-import { COLORS } from '../constants/colors';
+import { COLORS, getThemeColors } from '../constants/colors';
+import type { ThemeColors } from '../constants/theme';
+import { useTheme } from '../context/ThemeContext';
 import CustomButton from './CustomButton';
 
 type Props = {
@@ -28,6 +30,8 @@ type Props = {
 const EditBudgetModal = ({ visible, onClose, onSaved }: Props) => {
   const dispatch = useDispatch<AppDispatch>();
   const user = useSelector((state: RootState) => state.user.user);
+  const { isDarkMode } = useTheme();
+  const theme = getThemeColors(isDarkMode);
   const currencySymbol = getCurrencySymbol(user?.currency);
 
   const [budgetInput, setBudgetInput] = useState<string>('');
@@ -64,6 +68,8 @@ const EditBudgetModal = ({ visible, onClose, onSaved }: Props) => {
       setIsSubmitting(false);
     }
   };
+
+  const styles = useMemo(() => makeStyles(theme), [theme]);
 
   return (
     <Modal
@@ -107,7 +113,7 @@ const EditBudgetModal = ({ visible, onClose, onSaved }: Props) => {
                 value={budgetInput}
                 onChangeText={setBudgetInput}
                 placeholder="0.00"
-                placeholderTextColor={'#94A3B8'}
+                placeholderTextColor={theme.inputPlaceholder}
                 keyboardType="decimal-pad"
                 style={styles.amountInput}
                 autoFocus
@@ -133,101 +139,102 @@ const EditBudgetModal = ({ visible, onClose, onSaved }: Props) => {
   );
 };
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingTop: 18,
-    paddingBottom: 18,
-    backgroundColor: COLORS.PRIMARY,
-  },
-  titleWrap: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  title: {
-    color: '#FFFFFF',
-    fontSize: 17,
-    fontWeight: '700',
-  },
-  subtitle: {
-    color: COLORS.PRIMARY_LIGHT,
-    fontSize: 12,
-    fontWeight: '500',
-    marginTop: 2,
-  },
-  iconButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.16)',
-  },
-  iconButtonPlaceholder: {
-    width: 38,
-    height: 38,
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 24,
-  },
-  label: {
-    color: '#334155',
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  amountInputContainer: {
-    height: 78,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 16,
-    paddingHorizontal: 18,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  currencySymbol: {
-    color: COLORS.PRIMARY_DARK,
-    fontSize: 30,
-    fontWeight: '800',
-    marginRight: 8,
-  },
-  amountInput: {
-    flex: 1,
-    color: '#0F172A',
-    fontSize: 30,
-    fontWeight: '700',
-    padding: 0,
-  },
-  errorText: {
-    color: '#EF4444',
-    fontSize: 13,
-    marginTop: 10,
-    fontWeight: '600',
-  },
-  buttonContainer: {
-    marginTop: 24,
-  },
-  hiddenPressable: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: -1,
-  },
-});
+const makeStyles = (theme: ThemeColors) =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      paddingTop: 18,
+      paddingBottom: 18,
+      backgroundColor: COLORS.PRIMARY,
+    },
+    titleWrap: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    title: {
+      color: '#FFFFFF',
+      fontSize: 17,
+      fontWeight: '700',
+    },
+    subtitle: {
+      color: COLORS.PRIMARY_LIGHT,
+      fontSize: 12,
+      fontWeight: '500',
+      marginTop: 2,
+    },
+    iconButton: {
+      width: 38,
+      height: 38,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'rgba(255,255,255,0.16)',
+    },
+    iconButtonPlaceholder: {
+      width: 38,
+      height: 38,
+    },
+    keyboardView: {
+      flex: 1,
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: 20,
+      paddingTop: 24,
+    },
+    label: {
+      color: theme.textPrimary,
+      fontSize: 14,
+      fontWeight: '700',
+      marginBottom: 8,
+    },
+    amountInputContainer: {
+      height: 78,
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderRadius: 16,
+      paddingHorizontal: 18,
+      backgroundColor: theme.inputBg,
+      borderWidth: 1,
+      borderColor: theme.border,
+    },
+    currencySymbol: {
+      color: COLORS.PRIMARY_DARK,
+      fontSize: 30,
+      fontWeight: '800',
+      marginRight: 8,
+    },
+    amountInput: {
+      flex: 1,
+      color: theme.textPrimary,
+      fontSize: 30,
+      fontWeight: '700',
+      padding: 0,
+    },
+    errorText: {
+      color: '#EF4444',
+      fontSize: 13,
+      marginTop: 10,
+      fontWeight: '600',
+    },
+    buttonContainer: {
+      marginTop: 24,
+    },
+    hiddenPressable: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: -1,
+    },
+  });
 
 export default EditBudgetModal;
