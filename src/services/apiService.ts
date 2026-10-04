@@ -1,4 +1,5 @@
 import { BASE_URL } from '../config/apiUrl';
+import { AIInsightResponse, AISummaryResponse } from '../types/AI';
 import {
   getRefreshToken,
   removeRefreshToken,
@@ -187,6 +188,33 @@ async function putMultipart<T>(
   }
 
   return data as T;
+}
+
+export const buildInsightsEndpoint = (period: 'month' | 'week' = 'week') =>
+  `/ai/insights?period=${period}`;
+
+export const buildMonthlySummaryEndpoint = (year?: number, month?: number) => {
+  const params = new URLSearchParams();
+
+  if (year !== undefined) {
+    params.set('year', String(year));
+  }
+
+  if (month !== undefined) {
+    params.set('month', String(month).padStart(2, '0'));
+  }
+
+  const queryString = params.toString();
+
+  return `/ai/monthly-summary${queryString ? `?${queryString}` : ''}`;
+};
+
+export async function fetchAIInsights(period: 'month' | 'week' = 'week') {
+  return api.get<AIInsightResponse>(buildInsightsEndpoint(period));
+}
+
+export async function fetchMonthlySummary(year?: number, month?: number) {
+  return api.get<AISummaryResponse>(buildMonthlySummaryEndpoint(year, month));
 }
 
 export const api = {

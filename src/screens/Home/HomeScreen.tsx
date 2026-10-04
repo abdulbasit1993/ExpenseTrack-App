@@ -8,25 +8,39 @@ import {
   Alert,
   RefreshControl,
   TouchableOpacity,
+  Pressable,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import SkeletonPlaceholder from 'react-native-skeleton-placeholder';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootState } from '../../store/store';
+import type { RootStackParamList } from '../../navigation/RootStack';
 import Icon from '@react-native-vector-icons/ionicons';
 import { COLORS, getThemeColors } from '../../constants/colors';
 import type { ThemeColors } from '../../constants/theme';
 import { formatCurrency, getCurrencySymbol } from '../../utils/helpers';
 import { useTheme } from '../../context/ThemeContext';
 import { api } from '../../services/apiService';
+import {
+  buildInsightsEndpoint,
+  buildMonthlySummaryEndpoint,
+  fetchAIInsights,
+  fetchMonthlySummary,
+} from '../../services/apiService';
 import type {
   DashboardData,
   DashboardResponse,
   DashboardSummary,
   RecentTransaction,
 } from '../../types/Dashboard';
+import type {
+  AIInsightResponse,
+  AIMonthlySummary,
+  AISummaryData,
+} from '../../types/AI';
 import EditBudgetModal from '../../components/EditBudgetModal';
 
 const RECENT_TRANSACTIONS_LIMIT = 5;
@@ -40,6 +54,19 @@ const EMPTY_SUMMARY: DashboardSummary = {
   totalExpenses: 0,
   monthlyBudget: 0,
   monthlySpent: 0,
+};
+
+const EMPTY_AI_SUMMARY: AISummaryData = {
+  income: 0,
+  expense: 0,
+  net: 0,
+  monthlyBudget: 0,
+  budgetRemaining: 0,
+  budgetStatus: '—',
+  highestExpenseCategory: '—',
+  highestExpenseAmount: 0,
+  transactionCount: 0,
+  currency: '',
 };
 
 const buildDashboardEndpoint = ({
@@ -91,7 +118,8 @@ const formatTransactionDate = (value: string) =>
   });
 
 const HomeScreen = () => {
-  const navigation = useNavigation();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const user = useSelector((state: RootState) => state.user.user);
   const { isDarkMode } = useTheme();
   const theme = getThemeColors(isDarkMode);
@@ -103,6 +131,118 @@ const HomeScreen = () => {
   const [isRefreshing, setRefreshing] = useState(false);
   const hasLoadedOnce = useRef(false);
   const [isBudgetModalVisible, setBudgetModalVisible] = useState(false);
+
+  const [insights, setInsights] = useState<string[]>([]);
+  const [monthlySummary, setMonthlySummary] = useState<AIMonthlySummary | null>(
+    null,
+  );
+  const [isAILoading, setIsAILoading] = useState(true);
+  const [aiError, setAIError] = useState<string | null>(null);
+
+  // Sub-components with access to `styles`
+  const SummaryStat = ({
+    label,
+    value,
+    color,
+  }: {
+    label: string;
+    value: string;
+    color: string;
+  }) => (
+    <View style={styles.summaryStat}>
+      <Text style={styles.summaryStatLabel}>{label}</Text>
+      <Text style={[styles.summaryStatValue, { color }]}>{value}</Text>
+    </View>
+  );
+
+  const InsightChip = ({ text }: { text: string }) => (
+    <View style={styles.insightChip}>
+      <Text style={styles.insightText}>{text}</Text>
+    </View>
+  );
+
+  const renderAISkeleton = (isDarkMode: boolean) => (
+    <View style={styles.aiCard}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 6,
+          marginBottom: 10,
+        }}
+      >
+        <View
+          style={{
+            width: 18,
+            height: 18,
+            borderRadius: 9,
+            backgroundColor: isDarkMode ? '#334155' : '#E2E8F0',
+          }}
+        />
+        <View
+          style={{
+            width: 100,
+            height: 14,
+            borderRadius: 6,
+            backgroundColor: isDarkMode ? '#334155' : '#E2E8F0',
+          }}
+        />
+      </View>
+      {[0, 1, 2].map(i => (
+        <View
+          key={i}
+          style={{
+            height: 12,
+            borderRadius: 6,
+            backgroundColor: isDarkMode ? '#334155' : '#E2E8F0',
+            marginBottom: 8,
+            width: i === 1 ? '80%' : '100%',
+          }}
+        />
+      ))}
+    </View>
+  );
+
+  const renderSummarySkeleton = (isDarkMode: boolean, styles: any) => (
+    <View style={styles.aiCard}>
+      <View
+        style={{
+          width: 140,
+          height: 14,
+          borderRadius: 6,
+          backgroundColor: isDarkMode ? '#334155' : '#E2E8F0',
+          marginBottom: 10,
+        }}
+      />
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          marginBottom: 12,
+        }}
+      >
+        {[0, 1, 2].map(i => (
+          <View
+            key={i}
+            style={{
+              width: 70,
+              height: 52,
+              borderRadius: 12,
+              backgroundColor: isDarkMode ? '#334155' : '#E2E8F0',
+            }}
+          />
+        ))}
+      </View>
+      <View
+        style={{
+          height: 10,
+          borderRadius: 5,
+          backgroundColor: isDarkMode ? '#334155' : '#E2E8F0',
+          width: '60%',
+        }}
+      />
+    </View>
+  );
 
   const loadDashboard = useCallback(async (mode: 'initial' | 'refresh') => {
     try {
@@ -132,11 +272,40 @@ const HomeScreen = () => {
     }
   }, []);
 
+  const loadAIInsights = useCallback(async () => {
+    try {
+      const [insightsRes, summaryRes] = await Promise.all([
+        fetchAIInsights('month'),
+        fetchMonthlySummary(),
+      ]);
+
+      if (!insightsRes.success || !insightsRes.data) {
+        throw new Error('Unable to load AI insights.');
+      }
+
+      setInsights(insightsRes.data.insights);
+
+      if (summaryRes.success && summaryRes.data) {
+        setMonthlySummary(summaryRes.data);
+      }
+    } catch (error: any) {
+      setAIError(error?.message ?? 'Something went wrong. Please try again.');
+    } finally {
+      setIsAILoading(false);
+    }
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       loadDashboard(hasLoadedOnce.current ? 'refresh' : 'initial');
       hasLoadedOnce.current = true;
     }, [loadDashboard]),
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      loadAIInsights();
+    }, [loadAIInsights]),
   );
 
   const localBudget = user?.monthlyBudget ?? 0;
@@ -151,10 +320,10 @@ const HomeScreen = () => {
 
   const remainingBudget = effectiveBudget - summary.monthlySpent;
 
+  const aiSummary = monthlySummary?.data ?? EMPTY_AI_SUMMARY;
+
   const renderTransaction = ({ item }: { item: RecentTransaction }) => {
     const isIncome = item.amount > 0;
-
-    const categoryIcon = item.category?.icon ?? (isIncome ? '💼' : '🧾');
 
     const iconBackground = item.category?.color
       ? `${item.category.color}1F`
@@ -168,12 +337,15 @@ const HomeScreen = () => {
             { backgroundColor: iconBackground },
           ]}
         >
-          {/* <Text style={styles.transactionIcon}>{categoryIcon}</Text> */}
-          <Icon
-            name={categoryIcon as IconName}
-            size={18}
-            color={theme.textPrimary}
-          />
+          {item.category?.icon ? (
+            <Icon
+              name={item.category.icon as IconName}
+              size={18}
+              color={theme.textPrimary}
+            />
+          ) : (
+            <Text style={styles.transactionIcon}>{isIncome ? '💼' : '🧾'}</Text>
+          )}
         </View>
 
         <View style={styles.transactionDetails}>
@@ -319,9 +491,119 @@ const HomeScreen = () => {
           )}
         </View>
 
+        {/* ------- AI Summary Card -------- */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>AI Monthly Summary</Text>
+        </View>
+
+        {isAILoading ? (
+          renderSummarySkeleton(isDarkMode, styles)
+        ) : aiError ? (
+          <View style={styles.aiCard}>
+            <Text style={styles.aiErrorText}>⚠️ {aiError}</Text>
+          </View>
+        ) : (
+          <View style={styles.aiCard}>
+            <Text style={styles.aiSummaryText}>{monthlySummary?.summary}</Text>
+
+            <View style={styles.aiStatsRow}>
+              <SummaryStat
+                label="Income"
+                value={formatCurrency(
+                  aiSummary.income,
+                  getCurrencySymbol(aiSummary.currency as string),
+                )}
+                color={COLORS.SUCCESS}
+              />
+              <SummaryStat
+                label="Expenses"
+                value={formatCurrency(
+                  aiSummary.expense,
+                  getCurrencySymbol(aiSummary.currency as string),
+                )}
+                color={'#EF4444'}
+              />
+              <SummaryStat
+                label="Net"
+                value={formatCurrency(
+                  aiSummary.net,
+                  getCurrencySymbol(aiSummary.currency as string),
+                )}
+                color={COLORS.PRIMARY}
+              />
+            </View>
+
+            <View style={styles.aiBudgetRow}>
+              <Text style={styles.aiBudgetLabel}>Budget:</Text>
+              <Text style={styles.aiBudgetValue}>
+                {formatCurrency(
+                  aiSummary.monthlyBudget,
+                  getCurrencySymbol(aiSummary.currency as string),
+                )}
+              </Text>
+              <Text style={styles.aiBudgetLabel}>Remaining:</Text>
+              <Text
+                style={[
+                  styles.aiBudgetValue,
+                  {
+                    color:
+                      aiSummary.budgetStatus === 'within budget'
+                        ? COLORS.SUCCESS
+                        : '#EF4444',
+                  },
+                ]}
+              >
+                {formatCurrency(
+                  aiSummary.budgetRemaining,
+                  getCurrencySymbol(aiSummary.currency as string),
+                )}
+              </Text>
+            </View>
+
+            <View
+              style={[
+                styles.badge,
+                aiSummary.budgetStatus === 'within budget'
+                  ? styles.badgeWithin
+                  : styles.badgeOver,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.badgeText,
+                  aiSummary.budgetStatus === 'within budget'
+                    ? styles.badgeWithinText
+                    : styles.badgeOverText,
+                ]}
+              >
+                {aiSummary.budgetStatus}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* ------- AI Insights Card -------- */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>AI Insights</Text>
+        </View>
+
+        {isAILoading ? (
+          renderAISkeleton(isDarkMode, styles)
+        ) : aiError ? null : insights.length === 0 ? (
+          <View style={styles.aiCard}>
+            <Text style={styles.aiEmptyText}>No insights available</Text>
+          </View>
+        ) : (
+          insights.map((text, index) => (
+            <InsightChip key={`insight=${index}`} text={text} />
+          ))
+        )}
+
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Recent Transactions</Text>
-          <Text style={styles.seeAll}>See All</Text>
+          <Pressable onPress={() => navigation.navigate('Transactions')}>
+            <Text style={styles.seeAll}>See All</Text>
+          </Pressable>
         </View>
       </>
     );
@@ -339,7 +621,11 @@ const HomeScreen = () => {
       >
         <SkeletonPlaceholder.Item style={styles.skeletonGreeting}>
           <SkeletonPlaceholder.Item>
-            <SkeletonPlaceholder.Item width={110} height={16} borderRadius={6} />
+            <SkeletonPlaceholder.Item
+              width={110}
+              height={16}
+              borderRadius={6}
+            />
             <SkeletonPlaceholder.Item
               width={180}
               height={28}
@@ -362,16 +648,37 @@ const HomeScreen = () => {
         </SkeletonPlaceholder.Item>
         <SkeletonPlaceholder.Item height={158} borderRadius={20} />
 
+        {/* AI Skeleton placeholders */}
         <SkeletonPlaceholder.Item style={styles.skeletonSectionHeader}>
           <SkeletonPlaceholder.Item width={190} height={20} borderRadius={7} />
-          <SkeletonPlaceholder.Item width={52} height={14} borderRadius={6} />
         </SkeletonPlaceholder.Item>
+        <SkeletonPlaceholder.Item
+          height={100}
+          borderRadius={16}
+          marginBottom={16}
+        />
+
+        <SkeletonPlaceholder.Item style={styles.skeletonSectionHeader}>
+          <SkeletonPlaceholder.Item width={190} height={20} borderRadius={7} />
+        </SkeletonPlaceholder.Item>
+        <SkeletonPlaceholder.Item height={80} borderRadius={16} />
 
         {[0, 1, 2, 3, 4].map(item => (
-          <SkeletonPlaceholder.Item key={item} style={styles.skeletonTransaction}>
-            <SkeletonPlaceholder.Item width={46} height={46} borderRadius={15} />
+          <SkeletonPlaceholder.Item
+            key={item}
+            style={styles.skeletonTransaction}
+          >
+            <SkeletonPlaceholder.Item
+              width={46}
+              height={46}
+              borderRadius={15}
+            />
             <SkeletonPlaceholder.Item marginLeft={12} flex={1}>
-              <SkeletonPlaceholder.Item width="62%" height={15} borderRadius={6} />
+              <SkeletonPlaceholder.Item
+                width="62%"
+                height={15}
+                borderRadius={6}
+              />
               <SkeletonPlaceholder.Item
                 width="42%"
                 height={12}
@@ -589,6 +896,7 @@ const themeStyles = (theme: ThemeColors) =>
       alignItems: 'center',
       justifyContent: 'space-between',
     },
+
     spendingRight: {
       alignItems: 'flex-end',
       gap: 8,
@@ -693,6 +1001,70 @@ const themeStyles = (theme: ThemeColors) =>
     footerSpacing: {
       height: 110,
     },
+
+    /* ---- AI Card ---- */
+    aiCard: {
+      borderRadius: 18,
+      padding: 16,
+      backgroundColor: theme.card,
+      borderWidth: 1,
+      borderColor: `${COLORS.AIACCENT}33`,
+      marginBottom: 8,
+    },
+    aiSummaryText: {
+      color: theme.textPrimary,
+      fontSize: 14,
+      fontWeight: '600',
+      lineHeight: 22,
+      marginBottom: 14,
+    },
+    aiStatsRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 12,
+    },
+    summaryStat: { alignItems: 'center' },
+    summaryStatLabel: {
+      color: theme.textSecondary,
+      fontSize: 11,
+      marginBottom: 3,
+    },
+    summaryStatValue: { fontSize: 15, fontWeight: '800' },
+    aiBudgetRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+      marginBottom: 10,
+    },
+    aiBudgetLabel: { color: theme.textSecondary, fontSize: 13 },
+    aiBudgetValue: {
+      color: theme.textPrimary,
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    badge: {
+      alignSelf: 'flex-start',
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+      borderRadius: 10,
+      marginTop: 4,
+    },
+    badgeWithin: { backgroundColor: 'rgba(34,197,94,0.15)' },
+    badgeOver: { backgroundColor: 'rgba(239,68,68,0.15)' },
+    badgeText: { fontSize: 12, fontWeight: '700' },
+    badgeWithinText: { color: COLORS.SUCCESS },
+    badgeOverText: { color: '#EF4444' },
+    aiErrorText: { color: '#EF4444', fontSize: 13, fontWeight: '600' },
+    aiEmptyText: { color: theme.textSecondary, fontSize: 13 },
+    insightChip: {
+      backgroundColor: `${COLORS.AIACCENT}12`,
+      borderWidth: 1,
+      borderColor: `${COLORS.AIACCENT}28`,
+      borderRadius: 12,
+      padding: 12,
+      marginBottom: 8,
+    },
+    insightText: { color: theme.textPrimary, fontSize: 13, lineHeight: 20 },
   });
 
 export default HomeScreen;
