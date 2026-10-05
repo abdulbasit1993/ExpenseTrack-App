@@ -45,6 +45,8 @@ import EditBudgetModal from '../../components/EditBudgetModal';
 
 const RECENT_TRANSACTIONS_LIMIT = 5;
 
+const STALE_MS = 30_000;
+
 type IconName = ComponentProps<typeof Icon>['name'];
 
 // Fallback values for the summary when the request fails
@@ -117,51 +119,44 @@ const formatTransactionDate = (value: string) =>
     day: 'numeric',
   });
 
-const HomeScreen = () => {
-  const navigation =
-    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const user = useSelector((state: RootState) => state.user.user);
-  const { isDarkMode } = useTheme();
-  const theme = getThemeColors(isDarkMode);
-  const styles = useMemo(() => themeStyles(theme), [theme]);
-  const currencySymbol = getCurrencySymbol(user?.currency);
+type Styles = ReturnType<typeof themeStyles>;
 
-  const [dashboard, setDashboard] = useState<DashboardData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setRefreshing] = useState(false);
-  const hasLoadedOnce = useRef(false);
-  const [isBudgetModalVisible, setBudgetModalVisible] = useState(false);
-
-  const [insights, setInsights] = useState<string[]>([]);
-  const [monthlySummary, setMonthlySummary] = useState<AIMonthlySummary | null>(
-    null,
-  );
-  const [isAILoading, setIsAILoading] = useState(true);
-  const [aiError, setAIError] = useState<string | null>(null);
-
-  // Sub-components with access to `styles`
-  const SummaryStat = ({
+const SummaryStat = React.memo(
+  ({
     label,
     value,
     color,
+    styles,
   }: {
     label: string;
     value: string;
     color: string;
+    styles: Styles;
   }) => (
     <View style={styles.summaryStat}>
       <Text style={styles.summaryStatLabel}>{label}</Text>
       <Text style={[styles.summaryStatValue, { color }]}>{value}</Text>
     </View>
-  );
+  ),
+);
 
-  const InsightChip = ({ text }: { text: string }) => (
+const InsightChip = React.memo(
+  ({ text, styles }: { text: string; styles: Styles }) => (
     <View style={styles.insightChip}>
       <Text style={styles.insightText}>{text}</Text>
     </View>
-  );
+  ),
+);
 
-  const renderAISkeleton = (isDarkMode: boolean) => (
+const AISkeleton = ({
+  isDarkMode,
+  styles,
+}: {
+  isDarkMode: boolean;
+  styles: Styles;
+}) => {
+  const bg = isDarkMode ? '#334155' : '#E2E8F0';
+  return (
     <View style={styles.aiCard}>
       <View
         style={{
@@ -176,7 +171,7 @@ const HomeScreen = () => {
             width: 18,
             height: 18,
             borderRadius: 9,
-            backgroundColor: isDarkMode ? '#334155' : '#E2E8F0',
+            backgroundColor: bg,
           }}
         />
         <View
@@ -184,7 +179,7 @@ const HomeScreen = () => {
             width: 100,
             height: 14,
             borderRadius: 6,
-            backgroundColor: isDarkMode ? '#334155' : '#E2E8F0',
+            backgroundColor: bg,
           }}
         />
       </View>
@@ -194,7 +189,7 @@ const HomeScreen = () => {
           style={{
             height: 12,
             borderRadius: 6,
-            backgroundColor: isDarkMode ? '#334155' : '#E2E8F0',
+            backgroundColor: bg,
             marginBottom: 8,
             width: i === 1 ? '80%' : '100%',
           }}
@@ -202,15 +197,24 @@ const HomeScreen = () => {
       ))}
     </View>
   );
+};
 
-  const renderSummarySkeleton = (isDarkMode: boolean, styles: any) => (
+const SummarySkeleton = ({
+  isDarkMode,
+  styles,
+}: {
+  isDarkMode: boolean;
+  styles: Styles;
+}) => {
+  const bg = isDarkMode ? '#334155' : '#E2E8F0';
+  return (
     <View style={styles.aiCard}>
       <View
         style={{
           width: 140,
           height: 14,
           borderRadius: 6,
-          backgroundColor: isDarkMode ? '#334155' : '#E2E8F0',
+          backgroundColor: bg,
           marginBottom: 10,
         }}
       />
@@ -228,7 +232,7 @@ const HomeScreen = () => {
               width: 70,
               height: 52,
               borderRadius: 12,
-              backgroundColor: isDarkMode ? '#334155' : '#E2E8F0',
+              backgroundColor: bg,
             }}
           />
         ))}
@@ -237,43 +241,110 @@ const HomeScreen = () => {
         style={{
           height: 10,
           borderRadius: 5,
-          backgroundColor: isDarkMode ? '#334155' : '#E2E8F0',
+          backgroundColor: bg,
           width: '60%',
         }}
       />
     </View>
   );
+};
 
-  const loadDashboard = useCallback(async (mode: 'initial' | 'refresh') => {
-    try {
-      if (mode === 'initial') {
-        setIsLoading(true);
-      } else {
-        setRefreshing(true);
+const ErrorState = ({
+  message,
+  onRetry,
+  styles,
+}: {
+  message: string;
+  onRetry: () => void;
+  styles: Styles;
+}) => (
+  <View style={styles.centerState}>
+    <Icon
+      name="cloud-offline-circle"
+      size={40}
+      color={styles.centerStateText.color as string}
+    />
+    <Text style={styles.centerStateText}>{message}</Text>
+    <Pressable
+      onPress={onRetry}
+      style={styles.retryButton}
+      accessibilityRole="button"
+    >
+      <Text style={styles.retryText}>Try again</Text>
+    </Pressable>
+  </View>
+);
+
+const HomeScreen = () => {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const user = useSelector((state: RootState) => state.user.user);
+  const { isDarkMode } = useTheme();
+  const theme = getThemeColors(isDarkMode);
+  const styles = useMemo(() => themeStyles(theme), [theme]);
+  const currencySymbol = getCurrencySymbol(user?.currency);
+
+  const [dashboard, setDashboard] = useState<DashboardData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setRefreshing] = useState(false);
+  // const hasLoadedOnce = useRef(false);
+  const hasDataRef = useRef(false);
+  const lastFetchRef = useRef(0);
+  const [error, setError] = useState<string | null>(null);
+
+  const [isBudgetModalVisible, setBudgetModalVisible] = useState(false);
+
+  const [insights, setInsights] = useState<string[]>([]);
+  const [monthlySummary, setMonthlySummary] = useState<AIMonthlySummary | null>(
+    null,
+  );
+  const [isAILoading, setIsAILoading] = useState(true);
+  const [aiError, setAIError] = useState<string | null>(null);
+
+  const loadDashboard = useCallback(
+    async (mode: 'initial' | 'refresh' | 'silent') => {
+      try {
+        if (mode === 'initial') {
+          setIsLoading(true);
+        } else {
+          setRefreshing(true);
+        }
+
+        const response = await api.get<DashboardResponse>(
+          buildDashboardEndpoint({ limit: RECENT_TRANSACTIONS_LIMIT }),
+        );
+
+        if (!response.success || !response.data) {
+          throw new Error('Unable to load dashboard data.');
+        }
+
+        setDashboard(response.data);
+        setError(null);
+        hasDataRef.current = true;
+        lastFetchRef.current = Date.now();
+      } catch (e) {
+        const message =
+          e instanceof Error
+            ? e.message
+            : 'Something went wrong. Please try again.';
+        if (!hasDataRef.current) {
+          setError(message);
+        } else if (mode === 'refresh') {
+          Alert.alert('Unable to refresh.', message);
+        }
+      } finally {
+        setIsLoading(false);
+        setRefreshing(false);
       }
+    },
+    [],
+  );
 
-      const response = await api.get<DashboardResponse>(
-        buildDashboardEndpoint({ limit: RECENT_TRANSACTIONS_LIMIT }),
-      );
-
-      if (!response.success || !response.data) {
-        throw new Error('Unable to load dashboard data.');
-      }
-
-      setDashboard(response.data);
-    } catch (error: any) {
-      Alert.alert(
-        'Unable to load dashboard.',
-        error?.message ?? 'Something went wrong. Please try again.',
-      );
-    } finally {
-      setIsLoading(false);
-      setRefreshing(false);
-    }
-  }, []);
+  const aiLastFetchRef = useRef(0);
 
   const loadAIInsights = useCallback(async () => {
     try {
+      setAIError(null);
       const [insightsRes, summaryRes] = await Promise.all([
         fetchAIInsights('month'),
         fetchMonthlySummary(),
@@ -288,6 +359,8 @@ const HomeScreen = () => {
       if (summaryRes.success && summaryRes.data) {
         setMonthlySummary(summaryRes.data);
       }
+
+      aiLastFetchRef.current = Date.now();
     } catch (error: any) {
       setAIError(error?.message ?? 'Something went wrong. Please try again.');
     } finally {
@@ -297,14 +370,19 @@ const HomeScreen = () => {
 
   useFocusEffect(
     useCallback(() => {
-      loadDashboard(hasLoadedOnce.current ? 'refresh' : 'initial');
-      hasLoadedOnce.current = true;
+      if (!hasDataRef.current) {
+        loadDashboard('initial');
+      } else if (Date.now() - lastFetchRef.current > STALE_MS) {
+        loadDashboard('silent');
+      }
     }, [loadDashboard]),
   );
 
   useFocusEffect(
     useCallback(() => {
-      loadAIInsights();
+      if (Date.now() - aiLastFetchRef.current > STALE_MS) {
+        loadAIInsights();
+      }
     }, [loadAIInsights]),
   );
 
@@ -435,48 +513,48 @@ const HomeScreen = () => {
           </Text>
         </View>
 
-        <View style={styles.spendingCard}>
-          <View style={styles.spendingTopRow}>
-            <View>
-              <Text style={styles.spendingAmount}>
-                {formatCurrency(summary.monthlySpent, currencySymbol)}
-              </Text>
-              <Text style={styles.budgetText}>
-                of {formatCurrency(effectiveBudget, currencySymbol)} budget
-              </Text>
-            </View>
-
-            <View style={styles.spendingRight}>
-              <View style={styles.progressPercentage}>
-                <Text style={styles.progressPercentageText}>
-                  {Math.round(spendingProgress)}%
+        {effectiveBudget > 0 ? (
+          <View style={styles.spendingCard}>
+            <View style={styles.spendingTopRow}>
+              <View>
+                <Text style={styles.spendingAmount}>
+                  {formatCurrency(summary.monthlySpent, currencySymbol)}
+                </Text>
+                <Text style={styles.budgetText}>
+                  of {formatCurrency(effectiveBudget, currencySymbol)} budget
                 </Text>
               </View>
 
-              <TouchableOpacity
-                onPress={() => setBudgetModalVisible(true)}
-                style={styles.editBudgetButton}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel="Edit monthly budget"
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Icon name="pencil" size={14} color={COLORS.PRIMARY_DARK} />
-                <Text style={styles.editBudgetText}>Edit</Text>
-              </TouchableOpacity>
+              <View style={styles.spendingRight}>
+                <View style={styles.progressPercentage}>
+                  <Text style={styles.progressPercentageText}>
+                    {Math.round(spendingProgress)}%
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  onPress={() => setBudgetModalVisible(true)}
+                  style={styles.editBudgetButton}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel="Edit monthly budget"
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Icon name="pencil" size={14} color={COLORS.PRIMARY_DARK} />
+                  <Text style={styles.editBudgetText}>Edit</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
 
-          <View style={styles.progressTrack}>
-            <View
-              style={[
-                styles.progressBar,
-                { width: `${Math.min(spendingProgress, 100)}%` },
-              ]}
-            />
-          </View>
+            <View style={styles.progressTrack}>
+              <View
+                style={[
+                  styles.progressBar,
+                  { width: `${Math.min(spendingProgress, 100)}%` },
+                ]}
+              />
+            </View>
 
-          {effectiveBudget > 0 && (
             <Text
               style={[
                 styles.remainingText,
@@ -488,8 +566,42 @@ const HomeScreen = () => {
                 ? 'remaining this month'
                 : 'over budget this month'}
             </Text>
-          )}
-        </View>
+          </View>
+        ) : (
+          <Pressable
+            onPress={() => setBudgetModalVisible(true)}
+            style={({ pressed }) => [
+              styles.setBudgetCard,
+              pressed && styles.setBudgetCardPressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Set a monthly budget"
+            accessibilityHint="Opens the budget editor"
+          >
+            <View style={styles.setBudgetIconWrap}>
+              <Icon
+                name="wallet-outline"
+                size={22}
+                color={COLORS.PRIMARY_DARK}
+              />
+            </View>
+
+            <View style={styles.setBudgetTextWrap}>
+              <Text style={styles.setBudgetTitle}>Set a monthly budget</Text>
+              <Text style={styles.setBudgetSubtitle}>
+                You've spent{' '}
+                {formatCurrency(summary.monthlySpent, currencySymbol)} so far.
+                Add a budget to track your progress.
+              </Text>
+            </View>
+
+            <Icon
+              name="chevron-forward"
+              size={20}
+              color={theme.textSecondary}
+            />
+          </Pressable>
+        )}
 
         {/* ------- AI Summary Card -------- */}
         <View style={styles.sectionHeader}>
@@ -497,7 +609,8 @@ const HomeScreen = () => {
         </View>
 
         {isAILoading ? (
-          renderSummarySkeleton(isDarkMode, styles)
+          // renderSummarySkeleton(isDarkMode, styles)
+          <SummarySkeleton isDarkMode={isDarkMode} styles={styles} />
         ) : aiError ? (
           <View style={styles.aiCard}>
             <Text style={styles.aiErrorText}>⚠️ {aiError}</Text>
@@ -514,6 +627,7 @@ const HomeScreen = () => {
                   getCurrencySymbol(aiSummary.currency as string),
                 )}
                 color={COLORS.SUCCESS}
+                styles={styles}
               />
               <SummaryStat
                 label="Expenses"
@@ -522,6 +636,7 @@ const HomeScreen = () => {
                   getCurrencySymbol(aiSummary.currency as string),
                 )}
                 color={'#EF4444'}
+                styles={styles}
               />
               <SummaryStat
                 label="Net"
@@ -530,6 +645,7 @@ const HomeScreen = () => {
                   getCurrencySymbol(aiSummary.currency as string),
                 )}
                 color={COLORS.PRIMARY}
+                styles={styles}
               />
             </View>
 
@@ -588,14 +704,14 @@ const HomeScreen = () => {
         </View>
 
         {isAILoading ? (
-          renderAISkeleton(isDarkMode, styles)
+          <AISkeleton isDarkMode={isDarkMode} styles={styles} />
         ) : aiError ? null : insights.length === 0 ? (
           <View style={styles.aiCard}>
             <Text style={styles.aiEmptyText}>No insights available</Text>
           </View>
         ) : (
           insights.map((text, index) => (
-            <InsightChip key={`insight=${index}`} text={text} />
+            <InsightChip key={`insight=${index}`} text={text} styles={styles} />
           ))
         )}
 
@@ -705,8 +821,14 @@ const HomeScreen = () => {
         backgroundColor={theme.background}
       />
 
-      {isLoading || isRefreshing ? (
+      {isLoading ? (
         renderLoadingSkeleton()
+      ) : error && !dashboard ? (
+        <ErrorState
+          message={error}
+          onRetry={() => loadDashboard('initial')}
+          styles={styles}
+        />
       ) : (
         <FlashList
           data={recentTransactions}
@@ -714,7 +836,7 @@ const HomeScreen = () => {
           keyExtractor={item => item.id}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.content}
-          ListHeaderComponent={renderHeader}
+          ListHeaderComponent={renderHeader()}
           ListFooterComponent={<View style={styles.footerSpacing} />}
           refreshControl={
             <RefreshControl
@@ -724,6 +846,16 @@ const HomeScreen = () => {
               colors={[COLORS.PRIMARY]}
             />
           }
+          ListEmptyComponent={
+            <View style={styles.emptyTransactions}>
+              <Icon
+                name="receipt-outline"
+                size={32}
+                color={theme.textSecondary}
+              />
+              <Text style={styles.aiEmptyText}>No transactions yet</Text>
+            </View>
+          }
         />
       )}
 
@@ -732,7 +864,7 @@ const HomeScreen = () => {
         visible={isBudgetModalVisible}
         onClose={() => setBudgetModalVisible(false)}
         onSaved={() => {
-          loadDashboard('refresh');
+          loadDashboard('silent');
         }}
       />
     </SafeAreaView>
@@ -836,6 +968,70 @@ const themeStyles = (theme: ThemeColors) =>
       flexDirection: 'row',
       alignItems: 'center',
       flex: 1,
+    },
+    centerState: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 32,
+      gap: 12,
+    },
+    centerStateText: {
+      color: theme.textSecondary,
+      fontSize: 14,
+      textAlign: 'center',
+    },
+    retryButton: {
+      paddingHorizontal: 18,
+      paddingVertical: 10,
+      borderRadius: 12,
+      backgroundColor: COLORS.PRIMARY,
+    },
+    retryText: {
+      color: '#FFFFFF',
+      fontWeight: '700',
+      fontSize: 14,
+    },
+    emptyTransactions: {
+      alignItems: 'center',
+      paddingVertical: 32,
+      gap: 8,
+    },
+    setBudgetCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 14,
+      borderRadius: 20,
+      padding: 18,
+      backgroundColor: theme.card,
+      borderWidth: 1,
+      borderStyle: 'dashed',
+      borderColor: theme.border,
+    },
+    setBudgetCardPressed: {
+      opacity: 0.7,
+    },
+    setBudgetIconWrap: {
+      width: 46,
+      height: 46,
+      borderRadius: 15,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: COLORS.PRIMARY_GLOW,
+    },
+    setBudgetTextWrap: {
+      flex: 1,
+    },
+    setBudgetTitle: {
+      color: theme.textPrimary,
+      fontSize: 15,
+      fontWeight: '800',
+    },
+    setBudgetSubtitle: {
+      color: theme.textSecondary,
+      fontSize: 12,
+      lineHeight: 18,
+      marginTop: 4,
     },
     detailIcon: {
       width: 34,
